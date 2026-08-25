@@ -1,0 +1,9 @@
+# OS / Editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Backups (lokale Exporte nicht versionieren)
+aufgaben-backup_*.json

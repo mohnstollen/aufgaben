@@ -105,7 +105,7 @@
   .tactions{display:flex; gap:6px; flex-shrink:0}
   .iconbtn{
     background:transparent; border:none; color:var(--muted); cursor:pointer;
-    padding:6px; border-radius:8px; display:grid; place-items:center;
+    padding:6px; border-radius:8px; display:grid; place-items:center; font-size:15px;
   }
   .iconbtn:hover{background:var(--surface2); color:var(--text)}
   .empty{text-align:center; color:var(--muted); padding:60px 20px; font-size:14px}
@@ -145,7 +145,7 @@
   .field .hint{font-size:11px; color:var(--muted); margin-top:4px}
   .row2{display:flex; gap:12px}
   .row2 .field{flex:1}
-  .modal-actions{display:flex; gap:10px; justify-content:flex-end; margin-top:6px}
+  .modal-actions{display:flex; gap:10px; justify-content:flex-end; margin-top:6px; flex-wrap:wrap}
   .btn{padding:11px 18px; border-radius:10px; border:none; cursor:pointer; font-size:14px; font-weight:500}
   .btn.primary{background:var(--accent); color:#fff}
   .btn.primary:hover{background:var(--accent-hover)}
@@ -153,13 +153,39 @@
   .btn.ghost:hover{border-color:var(--accent)}
   .btn.danger{background:var(--red); color:#fff}
 
+  /* Quick-entry (todo.txt) */
+  .quick{background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:16px}
+  .quick label{display:block; font-size:12.5px; color:var(--muted); margin-bottom:6px}
+  .quick input{width:100%; padding:11px 12px; border-radius:10px; border:1px solid var(--accent); background:var(--surface); color:var(--text); font-size:16px}
+  .quick .syntax{font-size:11px; color:var(--muted); margin-top:7px; line-height:1.5}
+  .quick .syntax code{background:var(--surface); padding:1px 6px; border-radius:5px; color:#c3b8ff}
+  .preview{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; min-height:4px}
+  .preview .pv-name{font-size:14px; font-weight:600; width:100%}
+  .toggle-details{background:none; border:none; color:var(--accent); cursor:pointer; font-size:12.5px; padding:4px 0; margin-bottom:8px}
+  .details{display:none}
+  .details.show{display:block}
+
   .manage-group{margin-bottom:18px}
   .manage-group h3{font-size:13px; color:var(--muted); margin:0 0 8px; text-transform:uppercase; letter-spacing:.5px}
   .manage-item{display:flex; gap:8px; align-items:center; padding:8px 10px; background:var(--surface2); border-radius:9px; margin-bottom:6px}
   .manage-item span{flex:1; font-size:14px}
+  .manage-item.stale{border:1px solid rgba(255,176,32,.4)}
   .manage-item input{flex:1; padding:6px 8px; border-radius:7px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:14px}
   .add-inline{display:flex; gap:8px; margin-top:8px}
   .add-inline input{flex:1; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-size:16px}
+
+  .switch-row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; background:var(--surface2); border-radius:10px}
+  .switch-row .lbl{font-size:14px}
+  .switch{position:relative; width:46px; height:26px; flex-shrink:0}
+  .switch input{opacity:0; width:0; height:0}
+  .slider{position:absolute; inset:0; background:var(--border); border-radius:26px; transition:.2s; cursor:pointer}
+  .slider::before{content:""; position:absolute; height:20px; width:20px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s}
+  .switch input:checked + .slider{background:var(--green)}
+  .switch input:checked + .slider::before{transform:translateX(20px)}
+  .inline-select{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; background:var(--surface2); border-radius:10px; margin-top:10px}
+  .inline-select select{width:auto; padding:7px 10px; font-size:14px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text)}
+  .fname{font-family:ui-monospace,Consolas,monospace; font-size:12.5px}
+  .stale-tag{font-size:10.5px; color:#ffd27a; background:rgba(255,176,32,.15); padding:2px 7px; border-radius:12px; margin-left:6px}
 </style>
 </head>
 <body>
@@ -183,10 +209,12 @@
       <option value="created">Sortieren: Erstellt</option>
     </select>
     <button id="manageBtn" class="ctrl">⚙️ Tags &amp; Projekte</button>
-    <button id="exportBtn" class="ctrl" title="Alle Daten als JSON-Datei sichern">⬇️ Export</button>
-    <button id="importBtn" class="ctrl" title="JSON-Backup einlesen">⬆️ Import</button>
+    <button id="exportBtn" class="ctrl" title="Alle Daten als JSON-Datei sichern">⬇️ JSON</button>
+    <button id="exportTxtBtn" class="ctrl" title="Als todo.txt exportieren">📄 todo.txt</button>
+    <button id="importBtn" class="ctrl" title="JSON- oder todo.txt-Datei einlesen">⬆️ Import</button>
+    <button id="backupsBtn" class="ctrl" title="Backups verwalten">🗄️ Backups</button>
     <button id="installBtn" class="ctrl" title="App installieren">📲 Installieren</button>
-    <input type="file" id="importFile" accept="application/json,.json" style="display:none">
+    <input type="file" id="importFile" accept="application/json,.json,text/plain,.txt" style="display:none">
   </div>
 
   <div class="filters" id="filters"></div>
@@ -207,33 +235,48 @@
   <div class="modal">
     <h2 id="taskModalTitle">Neue Aufgabe</h2>
     <input type="hidden" id="taskId">
-    <div class="field">
-      <label>Name der Aufgabe *</label>
-      <input type="text" id="fName" placeholder="Was ist zu tun?">
+
+    <div class="quick" id="quickBox">
+      <label>Schnelleingabe (todo.txt-Stil)</label>
+      <input type="text" id="fQuick" placeholder="Angebot prüfen @Schaltschrank #wichtig #büro 2026-09-15 (A)" autocomplete="off">
+      <div class="syntax">
+        <code>@Projekt</code> · <code>#tag</code> (mehrfach) · <code>YYYY-MM-DD</code> Fälligkeit · <code>(A)</code>/<code>(B)</code>/<code>(C)</code> = Hoch/Mittel/Niedrig
+      </div>
+      <div class="preview" id="quickPreview"></div>
     </div>
-    <div class="row2">
+
+    <button type="button" class="toggle-details" id="toggleDetails">▸ Details anzeigen / manuell anpassen</button>
+
+    <div class="details" id="detailsBox">
       <div class="field">
-        <label>Fälligkeitsdatum (Due Date)</label>
-        <input type="date" id="fDue">
+        <label>Name der Aufgabe *</label>
+        <input type="text" id="fName" placeholder="Was ist zu tun?">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Fälligkeitsdatum (Due Date)</label>
+          <input type="date" id="fDue">
+        </div>
+        <div class="field">
+          <label>Priorisierung</label>
+          <select id="fPrio">
+            <option>Hoch</option>
+            <option selected>Mittel</option>
+            <option>Niedrig</option>
+          </select>
+        </div>
       </div>
       <div class="field">
-        <label>Priorisierung</label>
-        <select id="fPrio">
-          <option>Hoch</option>
-          <option selected>Mittel</option>
-          <option>Niedrig</option>
-        </select>
+        <label>Projekt</label>
+        <select id="fProject"></select>
+      </div>
+      <div class="field">
+        <label>Tags</label>
+        <input type="text" id="fTags" placeholder="z. B. wichtig, büro, telefon">
+        <div class="hint">Mehrere Tags mit Komma trennen. Neue Tags werden automatisch angelegt.</div>
       </div>
     </div>
-    <div class="field">
-      <label>Projekt</label>
-      <select id="fProject"></select>
-    </div>
-    <div class="field">
-      <label>Tags</label>
-      <input type="text" id="fTags" placeholder="z. B. wichtig, büro, telefon">
-      <div class="hint">Mehrere Tags mit Komma trennen. Neue Tags werden automatisch angelegt.</div>
-    </div>
+
     <div class="modal-actions">
       <button class="btn ghost" id="cancelTask">Abbrechen</button>
       <button class="btn primary" id="saveTask">Speichern</button>
@@ -270,7 +313,7 @@
 <!-- Import Modal -->
 <div class="overlay" id="importOverlay">
   <div class="modal">
-    <h2>Backup importieren</h2>
+    <h2>Import</h2>
     <div class="field">
       <label>Wie soll importiert werden?</label>
       <select id="importMode">
@@ -289,9 +332,69 @@
   </div>
 </div>
 
+<!-- Backups Modal -->
+<div class="overlay" id="backupOverlay">
+  <div class="modal">
+    <h2>🗄️ Backups</h2>
+
+    <div class="field">
+      <div class="switch-row">
+        <span class="lbl">Tägliches Backup automatisch in den Download-Ordner</span>
+        <label class="switch">
+          <input type="checkbox" id="autoDlToggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="inline-select">
+        <span class="lbl" style="font-size:13.5px">Aufbewahrung</span>
+        <select id="retentionSel">
+          <option value="7">7 Tage</option>
+          <option value="14" selected>14 Tage</option>
+          <option value="30">30 Tage</option>
+          <option value="90">90 Tage</option>
+        </select>
+      </div>
+      <div class="hint" style="margin-top:8px">
+        Beim ersten Öffnen pro Tag wird eine <code>todo_JJJJ-MM-TT.txt</code> in die Downloads geladen.
+        Interne Snapshots älter als die Aufbewahrung werden automatisch gelöscht.
+      </div>
+    </div>
+
+    <div style="margin:6px 0 14px">
+      <button class="btn ghost" id="downloadLatestTxt">📄 Aktuellen Stand jetzt als todo.txt herunterladen</button>
+    </div>
+
+    <!-- Aufräum-Hinweis für heruntergeladene Dateien -->
+    <div class="manage-group" id="cleanupGroup" style="display:none">
+      <h3>🧹 Alte Download-Dateien aufräumen</h3>
+      <p class="hint" style="font-size:12px; margin:0 0 8px">
+        Diese <b>heruntergeladenen</b> Dateien sind älter als deine Aufbewahrung. Die App kann sie technisch
+        nicht selbst löschen – tippe sie in der Android-<b>Dateien-App</b> unter „Downloads" gezielt weg:
+      </p>
+      <div id="cleanupList"></div>
+      <button class="btn ghost" id="clearRegistry" style="margin-top:8px">Erledigt – Liste zurücksetzen</button>
+    </div>
+
+    <div class="manage-group">
+      <h3>Interne Snapshots</h3>
+      <p class="hint" style="font-size:12px; margin:0 0 8px">Bei jeder Änderung im lokalen Speicher gesichert. Herunterladen ⬇️ oder wiederherstellen ♻️.</p>
+      <div id="backupList"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn primary" id="closeBackup">Fertig</button>
+    </div>
+  </div>
+</div>
+
 <script>
-/* ---------- Storage ---------- */
+/* ---------- Storage keys ---------- */
 const LS_KEY = 'taskmanager_v1';
+const LS_TXT = 'taskmanager_todotxt';
+const LS_TXT_HIST = 'taskmanager_todotxt_history';
+const LS_AUTODL = 'taskmanager_autodl';          // { enabled, lastDate }
+const LS_RETENTION = 'taskmanager_retention';    // Zahl Tage
+const LS_DL_REGISTRY = 'taskmanager_dl_registry';// [{date, filename}]
 const defaultData = { tasks:[], projects:['Allgemein'], tags:['wichtig'] };
 let data = load();
 
@@ -302,7 +405,7 @@ function load(){
     return Object.assign(structuredClone(defaultData), d);
   }catch(e){ return structuredClone(defaultData); }
 }
-function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); }
+function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); autoBackup(); }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
 /* ---------- State ---------- */
@@ -316,23 +419,168 @@ let pendingImport = null;
 const $ = id => document.getElementById(id);
 const listEl = $('list');
 
-/* ---------- Rendering ---------- */
+/* ---------- Helpers ---------- */
 const PRIO_ORDER = { 'Hoch':0, 'Mittel':1, 'Niedrig':2 };
+const PRIO_TO_LETTER = { 'Hoch':'A','Mittel':'B','Niedrig':'C' };
+const LETTER_TO_PRIO = { 'A':'Hoch','B':'Mittel','C':'Niedrig' };
+function pad(n){ return String(n).padStart(2,'0'); }
+function toDateStr(ts){ if(!ts) return null; const d=new Date(ts); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function daysBetween(a,b){ return Math.floor((a-b)/86400000); }
+function fmtDate(d){ if(!d) return null; const dt=new Date(d+'T00:00:00'); return dt.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}); }
+function isOverdue(d){ if(!d) return false; const t=new Date(); t.setHours(0,0,0,0); return new Date(d+'T00:00:00') < t; }
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return escapeHtml(s); }
+function getRetention(){ const v=parseInt(localStorage.getItem(LS_RETENTION),10); return [7,14,30,90].includes(v)?v:14; }
+function setRetention(v){ localStorage.setItem(LS_RETENTION, String(v)); }
 
-function fmtDate(d){
-  if(!d) return null;
-  const dt = new Date(d+'T00:00:00');
-  return dt.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+/* ---------- todo.txt Serialisierung ---------- */
+function taskToTodoTxt(t){
+  const parts=[];
+  if(t.done){
+    parts.push('x'); parts.push(toDateStr(t.doneAt)||toDateStr(Date.now()));
+    if(t.created) parts.push(toDateStr(t.created));
+  } else {
+    if(t.prio && PRIO_TO_LETTER[t.prio]) parts.push('('+PRIO_TO_LETTER[t.prio]+')');
+    if(t.created) parts.push(toDateStr(t.created));
+  }
+  parts.push(t.name);
+  if(t.project) parts.push('+'+String(t.project).replace(/\s+/g,'_'));
+  (t.tags||[]).forEach(tg=> parts.push('@'+String(tg).replace(/\s+/g,'_')));
+  if(t.due) parts.push('due:'+t.due);
+  if(t.done && t.prio && PRIO_TO_LETTER[t.prio]) parts.push('pri:'+PRIO_TO_LETTER[t.prio]);
+  return parts.join(' ');
 }
-function isOverdue(d){
-  if(!d) return false;
+function todoTxtToTask(line){
+  let s=(line||'').trim();
+  if(!s || s.startsWith('#')) return null;
+  let done=false, doneAt=null, created=null, prio=null, due=null, project=null;
+  const tags=[];
+  if(/^x\s+/i.test(s)){
+    done=true; s=s.replace(/^x\s+/i,'');
+    let m=s.match(/^(\d{4}-\d{2}-\d{2})\s+/);
+    if(m){ doneAt=new Date(m[1]+'T00:00:00').getTime(); s=s.slice(m[0].length);
+      let m2=s.match(/^(\d{4}-\d{2}-\d{2})\s+/);
+      if(m2){ created=new Date(m2[1]+'T00:00:00').getTime(); s=s.slice(m2[0].length); }
+    }
+  } else {
+    let pm=s.match(/^\(([A-Za-z])\)\s+/);
+    if(pm){ prio=LETTER_TO_PRIO[pm[1].toUpperCase()]||null; s=s.slice(pm[0].length); }
+    let cm=s.match(/^(\d{4}-\d{2}-\d{2})\s+/);
+    if(cm){ created=new Date(cm[1]+'T00:00:00').getTime(); s=s.slice(cm[0].length); }
+  }
+  const words=s.split(/\s+/); const nameWords=[];
+  for(const w of words){
+    if(w.startsWith('+') && w.length>1){ if(!project) project=w.slice(1); }
+    else if(w.startsWith('@') && w.length>1){ const tg=w.slice(1); if(!tags.includes(tg)) tags.push(tg); }
+    else if(/^due:\d{4}-\d{2}-\d{2}$/i.test(w)){ due=w.slice(4); }
+    else if(/^pri:[A-Za-z]$/i.test(w)){ if(!prio) prio=LETTER_TO_PRIO[w.slice(4).toUpperCase()]||null; }
+    else if(/^[a-zA-Z]+:[^\s]+$/.test(w)){ /* ignore */ }
+    else nameWords.push(w);
+  }
+  const name=nameWords.join(' ').trim();
+  if(!name && !project && !tags.length) return null;
+  return { id:uid(), name:name||'(ohne Titel)', due:due||null, prio:prio||'Mittel',
+    project:project||null, tags, done, doneAt:done?(doneAt||Date.now()):null, created:created||Date.now() };
+}
+function buildTodoTxt(){ return data.tasks.map(taskToTodoTxt).join('\n') + (data.tasks.length?'\n':''); }
+function parseTodoTxtFile(content){
+  const tasks=content.split(/\r?\n/).map(todoTxtToTask).filter(Boolean);
+  if(!tasks.length) throw new Error('Keine Aufgaben in der todo.txt gefunden.');
+  const projects=[], tags=[];
+  tasks.forEach(t=>{
+    if(t.project && !projects.includes(t.project)) projects.push(t.project);
+    (t.tags||[]).forEach(tg=>{ if(!tags.includes(tg)) tags.push(tg); });
+  });
+  return { tasks, projects, tags };
+}
+
+/* ---------- Interne Snapshots (mit Aufbewahrung) ---------- */
+function autoBackup(){
+  try{
+    const text = buildTodoTxt();
+    const stamp = new Date().toISOString();
+    localStorage.setItem(LS_TXT, JSON.stringify({ updatedAt:stamp, text }));
+    const dayKey = stamp.slice(0,10);
+    let hist=[]; try{ hist = JSON.parse(localStorage.getItem(LS_TXT_HIST))||[]; }catch(e){}
+    const existing = hist.find(h=>h.date===dayKey);
+    if(existing){ existing.text=text; existing.updatedAt=stamp; }
+    else { hist.push({ date:dayKey, updatedAt:stamp, text }); }
+    hist = pruneByRetention(hist);
+    localStorage.setItem(LS_TXT_HIST, JSON.stringify(hist));
+  }catch(e){ console.warn('Auto-Backup fehlgeschlagen:', e); }
+}
+// Nach Datum bereinigen: alles älter als Aufbewahrung raus (mind. 1 behalten)
+function pruneByRetention(hist){
+  const keepDays = getRetention();
   const today = new Date(); today.setHours(0,0,0,0);
-  return new Date(d+'T00:00:00') < today;
+  let out = hist.filter(h=>{
+    const d = new Date(h.date+'T00:00:00');
+    return daysBetween(today, d) < keepDays;
+  });
+  if(!out.length && hist.length){ out=[hist[hist.length-1]]; } // Sicherheitsnetz: letzten behalten
+  return out.slice(-Math.max(keepDays, 1)).slice(-365);
 }
 
+/* ---------- Download-Register (heruntergeladene Dateien) ---------- */
+function getRegistry(){ try{ return JSON.parse(localStorage.getItem(LS_DL_REGISTRY))||[]; }catch(e){ return []; } }
+function setRegistry(r){ localStorage.setItem(LS_DL_REGISTRY, JSON.stringify(r)); }
+function recordDownload(filename){
+  const reg=getRegistry();
+  const date=toDateStr(Date.now());
+  if(!reg.some(x=>x.filename===filename)) reg.push({ date, filename, ts:Date.now() });
+  setRegistry(reg.slice(-400));
+}
+// liefert veraltete Einträge (älter als Aufbewahrung)
+function staleDownloads(){
+  const keepDays=getRetention();
+  const today=new Date(); today.setHours(0,0,0,0);
+  return getRegistry().filter(x=>{
+    const d=new Date(x.date+'T00:00:00');
+    return daysBetween(today,d) >= keepDays;
+  });
+}
+
+/* ---------- Auto-Download (täglich in Downloads) ---------- */
+function getAutoDl(){ try{ return JSON.parse(localStorage.getItem(LS_AUTODL))||{enabled:false,lastDate:null}; }catch(e){ return {enabled:false,lastDate:null}; } }
+function setAutoDl(o){ localStorage.setItem(LS_AUTODL, JSON.stringify(o)); }
+function scheduleAutoDownload(){
+  const cfg = getAutoDl();
+  if(!cfg.enabled) return;
+  const today = toDateStr(Date.now());
+  if(cfg.lastDate === today) return;
+  if(!data.tasks.length) return;
+  const doit = ()=>{
+    const c = getAutoDl();
+    if(c.lastDate === today){ cleanup(); return; }
+    const fn = `todo_${today}.txt`;
+    downloadText(buildTodoTxt(), fn, 'text/plain');
+    recordDownload(fn);
+    c.lastDate = today; setAutoDl(c);
+    const stale = staleDownloads();
+    toast(stale.length ? `Tages-Backup gespeichert 📄 · ${stale.length} alte Datei(en) zum Aufräumen` : 'Tägliches Backup in Downloads gespeichert 📄');
+    cleanup();
+  };
+  const cleanup = ()=>{
+    window.removeEventListener('pointerdown', doit);
+    window.removeEventListener('keydown', doit);
+  };
+  window.addEventListener('pointerdown', doit);
+  window.addEventListener('keydown', doit);
+}
+
+/* ---------- Download helper ---------- */
+function downloadText(text, filename, mime){
+  const blob = new Blob([text], { type: mime||'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1500);
+}
+
+/* ---------- Rendering ---------- */
 function renderFilters(){
-  const f = $('filters');
-  f.innerHTML = '';
+  const f = $('filters'); f.innerHTML='';
   data.projects.forEach(p=>{
     const c = document.createElement('div');
     c.className = 'chip proj'+(activeFilters.projects.has(p)?' active':'');
@@ -357,33 +605,23 @@ function render(){
     items = items.filter(t =>
       t.name.toLowerCase().includes(q) ||
       (t.project||'').toLowerCase().includes(q) ||
-      (t.tags||[]).some(tag=>tag.toLowerCase().includes(q))
-    );
+      (t.tags||[]).some(tag=>tag.toLowerCase().includes(q)));
   }
-  if(activeFilters.projects.size)
-    items = items.filter(t => activeFilters.projects.has(t.project));
-  if(activeFilters.tags.size)
-    items = items.filter(t => (t.tags||[]).some(tag=>activeFilters.tags.has(tag)));
-
+  if(activeFilters.projects.size) items = items.filter(t => activeFilters.projects.has(t.project));
+  if(activeFilters.tags.size) items = items.filter(t => (t.tags||[]).some(tag=>activeFilters.tags.has(tag)));
   items.sort((a,b)=>{
-    if(sortBy==='due'){
-      if(!a.due && !b.due) return 0;
-      if(!a.due) return 1; if(!b.due) return -1;
-      return a.due.localeCompare(b.due);
-    }
+    if(sortBy==='due'){ if(!a.due&&!b.due)return 0; if(!a.due)return 1; if(!b.due)return -1; return a.due.localeCompare(b.due); }
     if(sortBy==='prio') return PRIO_ORDER[a.prio]-PRIO_ORDER[b.prio];
     if(sortBy==='name') return a.name.localeCompare(b.name,'de');
     return b.created - a.created;
   });
-
-  listEl.innerHTML = '';
+  listEl.innerHTML='';
   if(!items.length){
     listEl.innerHTML = `<div class="empty">${view==='archive'?'Noch keine erledigten Aufgaben archiviert.':'Keine Aufgaben gefunden. Lege mit + eine neue an!'}</div>`;
     return;
   }
   items.forEach(t=>listEl.appendChild(taskCard(t)));
 }
-
 function taskCard(t){
   const el = document.createElement('div');
   el.className = `task prio-${t.prio}${t.done?' done':''}`;
@@ -418,10 +656,8 @@ function prioIcon(p){ return p==='Hoch'?'🔴':p==='Mittel'?'🟡':'🟢'; }
 
 /* ---------- Task actions ---------- */
 function toggleDone(id){
-  const t = data.tasks.find(x=>x.id===id);
-  if(!t) return;
-  t.done = !t.done;
-  t.doneAt = t.done ? Date.now() : null;
+  const t = data.tasks.find(x=>x.id===id); if(!t) return;
+  t.done = !t.done; t.doneAt = t.done ? Date.now() : null;
   save(); render();
 }
 function delTask(id){
@@ -430,105 +666,130 @@ function delTask(id){
   save(); render();
 }
 
-/* ---------- Task modal ---------- */
-function refreshProjectSelect(sel){
-  const s = $('fProject');
-  s.innerHTML = data.projects.map(p=>`<option${p===sel?' selected':''}>${escapeHtml(p)}</option>`).join('');
+/* ---------- Schnelleingabe-Parser ---------- */
+function parseQuick(text){
+  const raw = text || ''; let due=null, prio=null, project=null; const tags=[];
+  const pm = raw.match(/(?:^|\s)\(([A-Ca-c])\)(?=\s|$)/);
+  if(pm){ const p=pm[1].toUpperCase(); prio = p==='A'?'Hoch':(p==='B'?'Mittel':'Niedrig'); }
+  const dm = raw.match(/(?:^|\s)(\d{4}-\d{2}-\d{2})(?=\s|$)/);
+  if(dm) due = dm[1];
+  const tokenRe = /(?:^|\s)([@#])([^\s]+)/g; let tm;
+  while((tm = tokenRe.exec(raw))){ if(tm[1]==='@'){ if(!project) project=tm[2]; } else { if(!tags.includes(tm[2])) tags.push(tm[2]); } }
+  const name = raw
+    .replace(/(?:^|\s)\([A-Ca-c]\)(?=\s|$)/,' ')
+    .replace(/(?:^|\s)\d{4}-\d{2}-\d{2}(?=\s|$)/,' ')
+    .replace(/(?:^|\s)[@#][^\s]+/g,' ')
+    .replace(/\s+/g,' ').trim();
+  return { name, due, prio, project, tags };
 }
+function syncQuickToFields(){
+  const parsed = parseQuick($('fQuick').value);
+  $('fName').value = parsed.name;
+  $('fDue').value  = parsed.due || '';
+  $('fPrio').value = parsed.prio || 'Mittel';
+  const projSel = $('fProject');
+  if(parsed.project){
+    if(![...projSel.options].some(o=>o.value===parsed.project)){
+      const opt=document.createElement('option'); opt.value=parsed.project; opt.textContent=parsed.project+' (neu)'; projSel.appendChild(opt);
+    }
+    projSel.value = parsed.project;
+  }
+  $('fTags').value = parsed.tags.join(', ');
+  renderQuickPreview(parsed);
+}
+function renderQuickPreview(parsed){
+  const pv = $('quickPreview');
+  if(!parsed.name && !parsed.project && !parsed.tags.length && !parsed.due && !parsed.prio){ pv.innerHTML=''; return; }
+  const prio = parsed.prio || 'Mittel';
+  let html = `<div class="pv-name">${escapeHtml(parsed.name||'(kein Name)')}</div>`;
+  html += `<span class="badge prio-${prio}">${prioIcon(prio)} ${prio}</span>`;
+  if(parsed.due) html += `<span class="badge due">📅 ${fmtDate(parsed.due)}</span>`;
+  if(parsed.project) html += `<span class="badge proj">📁 ${escapeHtml(parsed.project)}${data.projects.includes(parsed.project)?'':' •neu'}</span>`;
+  parsed.tags.forEach(tg=>{ html += `<span class="badge tag">#${escapeHtml(tg)}${data.tags.includes(tg)?'':' •neu'}</span>`; });
+  pv.innerHTML = html;
+}
+
+/* ---------- Task modal ---------- */
+function refreshProjectSelect(sel){ $('fProject').innerHTML = data.projects.map(p=>`<option${p===sel?' selected':''}>${escapeHtml(p)}</option>`).join(''); }
 function openTask(id){
-  refreshProjectSelect();
+  refreshProjectSelect(); $('fQuick').value=''; $('quickPreview').innerHTML='';
   if(id){
     const t = data.tasks.find(x=>x.id===id);
-    $('taskModalTitle').textContent = 'Aufgabe bearbeiten';
-    $('taskId').value = t.id;
-    $('fName').value = t.name;
-    $('fDue').value = t.due||'';
-    $('fPrio').value = t.prio;
-    refreshProjectSelect(t.project);
-    $('fTags').value = (t.tags||[]).join(', ');
+    $('taskModalTitle').textContent='Aufgabe bearbeiten';
+    $('quickBox').style.display='none'; $('toggleDetails').style.display='none'; $('detailsBox').classList.add('show');
+    $('taskId').value=t.id; $('fName').value=t.name; $('fDue').value=t.due||''; $('fPrio').value=t.prio;
+    refreshProjectSelect(t.project); $('fTags').value=(t.tags||[]).join(', ');
   }else{
-    $('taskModalTitle').textContent = 'Neue Aufgabe';
-    $('taskId').value = '';
-    $('fName').value=''; $('fDue').value=''; $('fPrio').value='Mittel';
-    refreshProjectSelect();
-    $('fTags').value='';
+    $('taskModalTitle').textContent='Neue Aufgabe';
+    $('quickBox').style.display='block'; $('toggleDetails').style.display='block'; $('detailsBox').classList.remove('show');
+    $('taskId').value=''; $('fName').value=''; $('fDue').value=''; $('fPrio').value='Mittel';
+    refreshProjectSelect(); $('fTags').value='';
   }
   $('taskOverlay').classList.add('show');
-  $('fName').focus();
+  setTimeout(()=>{ (id?$('fName'):$('fQuick')).focus(); }, 50);
 }
 function closeTask(){ $('taskOverlay').classList.remove('show'); }
-
 function saveTask(){
+  if($('quickBox').style.display!=='none' && $('fQuick').value.trim()){ syncQuickToFields(); }
   const name = $('fName').value.trim();
-  if(!name){ $('fName').focus(); return; }
+  if(!name){ ($('quickBox').style.display!=='none'?$('fQuick'):$('fName')).focus(); return; }
   const tags = $('fTags').value.split(',').map(s=>s.trim()).filter(Boolean);
   tags.forEach(tg=>{ if(!data.tags.includes(tg)) data.tags.push(tg); });
-  const project = $('fProject').value;
+  let project = $('fProject').value;
+  if(project && !data.projects.includes(project)) data.projects.push(project);
   const id = $('taskId').value;
-  if(id){
-    const t = data.tasks.find(x=>x.id===id);
-    Object.assign(t,{ name, due:$('fDue').value||null, prio:$('fPrio').value, project, tags });
-  }else{
-    data.tasks.push({
-      id:uid(), name, due:$('fDue').value||null, prio:$('fPrio').value,
-      project, tags, done:false, doneAt:null, created:Date.now()
-    });
-  }
+  if(id){ const t=data.tasks.find(x=>x.id===id); Object.assign(t,{ name, due:$('fDue').value||null, prio:$('fPrio').value, project, tags }); }
+  else{ data.tasks.push({ id:uid(), name, due:$('fDue').value||null, prio:$('fPrio').value, project, tags, done:false, doneAt:null, created:Date.now() }); }
   save(); closeTask(); renderFilters(); render();
 }
 
 /* ---------- Manage modal ---------- */
 function openManage(){ renderManage(); $('manageOverlay').classList.add('show'); }
 function closeManage(){ $('manageOverlay').classList.remove('show'); }
-
 function renderManage(){
   const pl = $('projList'); pl.innerHTML='';
   data.projects.forEach((p)=>{
-    const row = document.createElement('div'); row.className='manage-item';
-    row.innerHTML = `<input value="${escapeAttr(p)}">
-      <button class="iconbtn" title="Löschen">🗑️</button>`;
-    const input = row.querySelector('input');
-    input.onchange = ()=>renameProject(p, input.value.trim());
-    row.querySelector('button').onclick = ()=>deleteProject(p);
+    const row=document.createElement('div'); row.className='manage-item';
+    row.innerHTML=`<input value="${escapeAttr(p)}"><button class="iconbtn" title="Löschen">🗑️</button>`;
+    row.querySelector('input').onchange=(e)=>renameProject(p, e.target.value.trim());
+    row.querySelector('button').onclick=()=>deleteProject(p);
     pl.appendChild(row);
   });
   const tl = $('tagList'); tl.innerHTML='';
   data.tags.forEach(t=>{
-    const row = document.createElement('div'); row.className='manage-item';
-    row.innerHTML = `<input value="${escapeAttr(t)}">
-      <button class="iconbtn" title="Löschen">🗑️</button>`;
-    const input = row.querySelector('input');
-    input.onchange = ()=>renameTag(t, input.value.trim());
-    row.querySelector('button').onclick = ()=>deleteTag(t);
+    const row=document.createElement('div'); row.className='manage-item';
+    row.innerHTML=`<input value="${escapeAttr(t)}"><button class="iconbtn" title="Löschen">🗑️</button>`;
+    row.querySelector('input').onchange=(e)=>renameTag(t, e.target.value.trim());
+    row.querySelector('button').onclick=()=>deleteTag(t);
     tl.appendChild(row);
   });
 }
 function renameProject(oldN,newN){
-  if(!newN || newN===oldN){ renderManage(); return; }
+  if(!newN||newN===oldN){ renderManage(); return; }
   if(data.projects.includes(newN)){ alert('Projekt existiert bereits.'); renderManage(); return; }
-  data.projects = data.projects.map(p=>p===oldN?newN:p);
+  data.projects=data.projects.map(p=>p===oldN?newN:p);
   data.tasks.forEach(t=>{ if(t.project===oldN) t.project=newN; });
   save(); renderManage(); renderFilters(); render();
 }
 function deleteProject(p){
-  const used = data.tasks.filter(t=>t.project===p).length;
+  const used=data.tasks.filter(t=>t.project===p).length;
   if(!confirm(`Projekt "${p}" löschen?`+(used?`\n${used} Aufgabe(n) werden auf "Allgemein" gesetzt.`:''))) return;
-  data.projects = data.projects.filter(x=>x!==p);
+  data.projects=data.projects.filter(x=>x!==p);
   if(!data.projects.length) data.projects=['Allgemein'];
   data.tasks.forEach(t=>{ if(t.project===p) t.project=data.projects[0]; });
   activeFilters.projects.delete(p);
   save(); renderManage(); renderFilters(); render();
 }
 function renameTag(oldT,newT){
-  if(!newT || newT===oldT){ renderManage(); return; }
+  if(!newT||newT===oldT){ renderManage(); return; }
   if(data.tags.includes(newT)){ alert('Tag existiert bereits.'); renderManage(); return; }
-  data.tags = data.tags.map(t=>t===oldT?newT:t);
+  data.tags=data.tags.map(t=>t===oldT?newT:t);
   data.tasks.forEach(t=>{ t.tags=(t.tags||[]).map(x=>x===oldT?newT:x); });
   save(); renderManage(); renderFilters(); render();
 }
 function deleteTag(tg){
   if(!confirm(`Tag "${tg}" löschen? Er wird aus allen Aufgaben entfernt.`)) return;
-  data.tags = data.tags.filter(x=>x!==tg);
+  data.tags=data.tags.filter(x=>x!==tg);
   data.tasks.forEach(t=>{ t.tags=(t.tags||[]).filter(x=>x!==tg); });
   activeFilters.tags.delete(tg);
   save(); renderManage(); renderFilters(); render();
@@ -536,40 +797,37 @@ function deleteTag(tg){
 
 /* ---------- Export ---------- */
 function exportData(){
-  const payload = {
-    app:'Aufgabenverwaltung', version:1, exportedAt:new Date().toISOString(),
-    data:{ tasks:data.tasks, projects:data.projects, tags:data.tags }
-  };
-  const blob = new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const stamp = new Date().toISOString().slice(0,10);
-  a.href = url; a.download = `aufgaben-backup_${stamp}.json`;
-  document.body.appendChild(a); a.click(); a.remove();
-  URL.revokeObjectURL(url);
-  toast(`Backup exportiert: ${data.tasks.length} Aufgabe(n) gesichert.`);
+  const payload = { app:'Aufgabenverwaltung', version:1, exportedAt:new Date().toISOString(),
+    data:{ tasks:data.tasks, projects:data.projects, tags:data.tags } };
+  downloadText(JSON.stringify(payload,null,2), `aufgaben-backup_${toDateStr(Date.now())}.json`, 'application/json');
+  toast(`JSON-Backup exportiert: ${data.tasks.length} Aufgabe(n).`);
+}
+function exportTodoTxt(){
+  const fn = `todo_${toDateStr(Date.now())}.txt`;
+  downloadText(buildTodoTxt(), fn, 'text/plain'); recordDownload(fn);
+  toast(`todo.txt exportiert: ${data.tasks.length} Aufgabe(n).`);
 }
 
 /* ---------- Import ---------- */
 function triggerImport(){ $('importFile').value=''; $('importFile').click(); }
 function handleImportFile(e){
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = ev=>{
+  const file=e.target.files[0]; if(!file) return;
+  const isTxt=file.name.toLowerCase().endsWith('.txt');
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const content=ev.target.result;
     try{
-      const parsed = JSON.parse(ev.target.result);
-      const d = parsed.data && parsed.data.tasks ? parsed.data : parsed;
-      if(!Array.isArray(d.tasks)) throw new Error('Kein gültiges Backup: "tasks" fehlt.');
-      pendingImport = {
-        tasks: Array.isArray(d.tasks)?d.tasks:[],
-        projects: Array.isArray(d.projects)?d.projects:[],
-        tags: Array.isArray(d.tags)?d.tags:[]
-      };
-      $('importSummary').innerHTML =
-        `Gefunden: <b>${pendingImport.tasks.length}</b> Aufgabe(n), `+
-        `<b>${pendingImport.projects.length}</b> Projekt(e), `+
-        `<b>${pendingImport.tags.length}</b> Tag(s).`;
+      let pending;
+      if(isTxt){ pending=parseTodoTxtFile(content); }
+      else{
+        try{ const parsed=JSON.parse(content); const d=parsed.data&&parsed.data.tasks?parsed.data:parsed;
+          if(!Array.isArray(d.tasks)) throw new Error('json');
+          pending={ tasks:d.tasks, projects:Array.isArray(d.projects)?d.projects:[], tags:Array.isArray(d.tags)?d.tags:[] };
+        }catch(_){ pending=parseTodoTxtFile(content); }
+      }
+      pendingImport=pending;
+      const fmt=isTxt?'todo.txt':'JSON';
+      $('importSummary').innerHTML=`Format erkannt: <b>${fmt}</b><br>Gefunden: <b>${pending.tasks.length}</b> Aufgabe(n), <b>${pending.projects.length}</b> Projekt(e), <b>${pending.tags.length}</b> Tag(s).`;
       $('importMode').value='merge'; updateImportHint();
       $('importOverlay').classList.add('show');
     }catch(err){ alert('Import fehlgeschlagen: '+err.message); }
@@ -577,50 +835,84 @@ function handleImportFile(e){
   reader.readAsText(file);
 }
 function updateImportHint(){
-  const merge = $('importMode').value==='merge';
+  const merge=$('importMode').value==='merge';
   $('importHint').textContent = merge
     ? 'Beim Zusammenführen werden nur neue Aufgaben, Tags und Projekte ergänzt. Doppelte werden übersprungen.'
-    : 'Achtung: Alle aktuellen Aufgaben, Tags und Projekte werden vollständig durch das Backup ersetzt.';
+    : 'Achtung: Alle aktuellen Aufgaben, Tags und Projekte werden vollständig durch die Datei ersetzt.';
 }
 function confirmImport(){
   if(!pendingImport) return;
-  const mode = $('importMode').value;
+  const mode=$('importMode').value;
   if(mode==='replace'){
     if(!confirm('Wirklich alle aktuellen Daten ersetzen? Das kann nicht rückgängig gemacht werden.')) return;
-    data.tasks = pendingImport.tasks;
-    data.projects = pendingImport.projects.length?pendingImport.projects:['Allgemein'];
-    data.tags = pendingImport.tags;
+    data.tasks=pendingImport.tasks;
+    data.projects=pendingImport.projects.length?pendingImport.projects.slice():['Allgemein'];
+    data.tags=pendingImport.tags.slice();
+    data.tasks.forEach(t=>{ if(t.project && !data.projects.includes(t.project)) data.projects.push(t.project); });
     toast(`Import abgeschlossen: ${data.tasks.length} Aufgabe(n) geladen.`);
   }else{
-    const existingIds = new Set(data.tasks.map(t=>t.id));
-    let added=0;
-    pendingImport.tasks.forEach(t=>{
-      let nt = {...t};
-      if(!nt.id || existingIds.has(nt.id)) nt.id = uid();
-      existingIds.add(nt.id);
-      data.tasks.push(nt); added++;
-    });
+    const existingIds=new Set(data.tasks.map(t=>t.id)); let added=0;
+    pendingImport.tasks.forEach(t=>{ let nt={...t}; if(!nt.id||existingIds.has(nt.id)) nt.id=uid(); existingIds.add(nt.id); data.tasks.push(nt); added++; });
     pendingImport.projects.forEach(p=>{ if(!data.projects.includes(p)) data.projects.push(p); });
     pendingImport.tags.forEach(tg=>{ if(!data.tags.includes(tg)) data.tags.push(tg); });
     data.tasks.forEach(t=>{ if(t.project && !data.projects.includes(t.project)) data.projects.push(t.project); });
     toast(`Import abgeschlossen: ${added} Aufgabe(n) hinzugefügt.`);
   }
-  pendingImport=null;
-  $('importOverlay').classList.remove('show');
+  pendingImport=null; $('importOverlay').classList.remove('show');
   save(); renderFilters(); render();
+}
+
+/* ---------- Backups modal ---------- */
+function openBackups(){
+  $('autoDlToggle').checked = getAutoDl().enabled;
+  $('retentionSel').value = String(getRetention());
+  renderBackups(); renderCleanup();
+  $('backupOverlay').classList.add('show');
+}
+function closeBackups(){ $('backupOverlay').classList.remove('show'); }
+function renderBackups(){
+  const wrap=$('backupList');
+  let hist=[]; try{ hist=JSON.parse(localStorage.getItem(LS_TXT_HIST))||[]; }catch(e){}
+  if(!hist.length){ wrap.innerHTML='<div class="hint">Noch keine Snapshots vorhanden. Sie entstehen automatisch bei der ersten Änderung.</div>'; return; }
+  wrap.innerHTML='';
+  hist.slice().reverse().forEach(h=>{
+    const count=h.text.split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#')).length;
+    const time=new Date(h.updatedAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+    const row=document.createElement('div'); row.className='manage-item';
+    row.innerHTML=`<span>${h.date} · ${count} Aufgabe(n) <span style="color:var(--muted)">(${time})</span></span>
+      <button class="iconbtn" data-a="dl" title="Herunterladen">⬇️</button>
+      <button class="iconbtn" data-a="rs" title="Wiederherstellen">♻️</button>`;
+    row.querySelector('[data-a=dl]').onclick=()=>{ const fn=`todo_${h.date}.txt`; downloadText(h.text, fn, 'text/plain'); recordDownload(fn); };
+    row.querySelector('[data-a=rs]').onclick=()=>restoreFromText(h.text);
+    wrap.appendChild(row);
+  });
+}
+function renderCleanup(){
+  const grp=$('cleanupGroup'); const list=$('cleanupList');
+  const stale=staleDownloads();
+  if(!stale.length){ grp.style.display='none'; list.innerHTML=''; return; }
+  grp.style.display='block'; list.innerHTML='';
+  stale.slice().reverse().forEach(x=>{
+    const ageDays = daysBetween(new Date().setHours(0,0,0,0), new Date(x.date+'T00:00:00'));
+    const row=document.createElement('div'); row.className='manage-item stale';
+    row.innerHTML=`<span class="fname">${escapeHtml(x.filename)}<span class="stale-tag">${ageDays} T alt</span></span>`;
+    list.appendChild(row);
+  });
+}
+function restoreFromText(text){
+  if(!confirm('Alle aktuellen Aufgaben durch dieses Backup ersetzen?')) return;
+  let pending; try{ pending=parseTodoTxtFile(text); }catch(err){ alert('Wiederherstellung fehlgeschlagen: '+err.message); return; }
+  data.tasks=pending.tasks;
+  data.projects=pending.projects.length?pending.projects.slice():['Allgemein'];
+  data.tags=pending.tags.slice();
+  data.tasks.forEach(t=>{ if(t.project && !data.projects.includes(t.project)) data.projects.push(t.project); });
+  save(); renderFilters(); render(); closeBackups();
+  toast('Backup wiederhergestellt.');
 }
 
 /* ---------- Toast ---------- */
 let toastTimer;
-function toast(msg){
-  const el=$('toast'); el.textContent=msg; el.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer=setTimeout(()=>el.classList.remove('show'),2800);
-}
-
-/* ---------- Utils ---------- */
-function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function escapeAttr(s){ return escapeHtml(s); }
+function toast(msg){ const el=$('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('show'),3000); }
 
 /* ---------- Events ---------- */
 $('fab').onclick = ()=>openTask();
@@ -629,67 +921,72 @@ $('saveTask').onclick = saveTask;
 $('manageBtn').onclick = openManage;
 $('closeManage').onclick = closeManage;
 $('exportBtn').onclick = exportData;
+$('exportTxtBtn').onclick = exportTodoTxt;
 $('importBtn').onclick = triggerImport;
 $('importFile').onchange = handleImportFile;
 $('importMode').onchange = updateImportHint;
 $('cancelImport').onclick = ()=>{ pendingImport=null; $('importOverlay').classList.remove('show'); };
 $('confirmImport').onclick = confirmImport;
+$('backupsBtn').onclick = openBackups;
+$('closeBackup').onclick = closeBackups;
+$('downloadLatestTxt').onclick = ()=>{ const fn=`todo_${toDateStr(Date.now())}.txt`; downloadText(buildTodoTxt(), fn, 'text/plain'); recordDownload(fn); renderCleanup(); toast('Aktuelles todo.txt heruntergeladen.'); };
+$('autoDlToggle').onchange = (e)=>{
+  const cfg=getAutoDl(); cfg.enabled=e.target.checked; setAutoDl(cfg);
+  if(cfg.enabled){ toast('Tägliches Auto-Backup aktiviert.'); scheduleAutoDownload(); }
+  else{ toast('Tägliches Auto-Backup deaktiviert.'); }
+};
+$('retentionSel').onchange = (e)=>{
+  setRetention(parseInt(e.target.value,10));
+  // sofort anwenden: Snapshots bereinigen + Cleanup neu berechnen
+  let hist=[]; try{ hist=JSON.parse(localStorage.getItem(LS_TXT_HIST))||[]; }catch(_){}
+  localStorage.setItem(LS_TXT_HIST, JSON.stringify(pruneByRetention(hist)));
+  renderBackups(); renderCleanup();
+  toast(`Aufbewahrung: ${getRetention()} Tage.`);
+};
+$('clearRegistry').onclick = ()=>{
+  if(!confirm('Aufräum-Liste zurücksetzen? (Nur die Merkliste in der App wird geleert – Dateien in Downloads bleiben unberührt.)')) return;
+  // nur veraltete Einträge entfernen, aktuelle behalten
+  const keepDays=getRetention(); const today=new Date(); today.setHours(0,0,0,0);
+  const kept=getRegistry().filter(x=>daysBetween(today,new Date(x.date+'T00:00:00'))<keepDays);
+  setRegistry(kept); renderCleanup(); toast('Aufräum-Liste zurückgesetzt.');
+};
 $('search').oninput = e=>{ searchTerm=e.target.value; render(); };
 $('sort').onchange = e=>{ sortBy=e.target.value; render(); };
 $('tabActive').onclick = ()=>switchView('active');
 $('tabArchive').onclick = ()=>switchView('archive');
-$('addProj').onclick = ()=>{
-  const v=$('newProj').value.trim(); if(!v) return;
-  if(data.projects.includes(v)){ alert('Projekt existiert bereits.'); return; }
-  data.projects.push(v); $('newProj').value=''; save(); renderManage(); renderFilters();
-};
-$('addTag').onclick = ()=>{
-  const v=$('newTag').value.trim(); if(!v) return;
-  if(data.tags.includes(v)){ alert('Tag existiert bereits.'); return; }
-  data.tags.push(v); $('newTag').value=''; save(); renderManage(); renderFilters();
-};
+
+$('fQuick').addEventListener('input', syncQuickToFields);
+$('fQuick').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); saveTask(); } });
+$('toggleDetails').onclick = ()=>{ const box=$('detailsBox'); box.classList.toggle('show'); $('toggleDetails').textContent=(box.classList.contains('show')?'▾':'▸')+' Details anzeigen / manuell anpassen'; };
+
+$('addProj').onclick = ()=>{ const v=$('newProj').value.trim(); if(!v) return; if(data.projects.includes(v)){ alert('Projekt existiert bereits.'); return; } data.projects.push(v); $('newProj').value=''; save(); renderManage(); renderFilters(); };
+$('addTag').onclick = ()=>{ const v=$('newTag').value.trim(); if(!v) return; if(data.tags.includes(v)){ alert('Tag existiert bereits.'); return; } data.tags.push(v); $('newTag').value=''; save(); renderManage(); renderFilters(); };
 $('newProj').addEventListener('keydown',e=>{ if(e.key==='Enter') $('addProj').click(); });
 $('newTag').addEventListener('keydown',e=>{ if(e.key==='Enter') $('addTag').click(); });
 $('fName').addEventListener('keydown',e=>{ if(e.key==='Enter') saveTask(); });
 
-[ 'taskOverlay','manageOverlay','importOverlay' ].forEach(id=>{
+[ 'taskOverlay','manageOverlay','importOverlay','backupOverlay' ].forEach(id=>{
   $(id).addEventListener('click',e=>{ if(e.target.id===id){ $(id).classList.remove('show'); } });
 });
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeTask(); closeManage(); $('importOverlay').classList.remove('show'); } });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeTask(); closeManage(); $('importOverlay').classList.remove('show'); closeBackups(); } });
 
-function switchView(v){
-  view=v;
-  $('tabActive').classList.toggle('active',v==='active');
-  $('tabArchive').classList.toggle('active',v==='archive');
-  render();
-}
+function switchView(v){ view=v; $('tabActive').classList.toggle('active',v==='active'); $('tabArchive').classList.toggle('active',v==='archive'); render(); }
 
-/* ---------- PWA: Service Worker + Install ---------- */
+/* ---------- PWA ---------- */
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('sw.js').catch(err=>console.warn('SW-Registrierung fehlgeschlagen:',err));
-  });
+  window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(err=>console.warn('SW-Registrierung fehlgeschlagen:',err)); });
 }
 let deferredPrompt=null;
-window.addEventListener('beforeinstallprompt',e=>{
-  e.preventDefault(); deferredPrompt=e;
-  $('installBtn').style.display='inline-block';
-});
-$('installBtn').onclick = async ()=>{
-  if(!deferredPrompt) return;
-  deferredPrompt.prompt();
-  await deferredPrompt.userChoice;
-  deferredPrompt=null;
-  $('installBtn').style.display='none';
-};
-window.addEventListener('appinstalled',()=>{
-  $('installBtn').style.display='none';
-  toast('App wurde installiert. 🎉');
-});
+window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferredPrompt=e; $('installBtn').style.display='inline-block'; });
+$('installBtn').onclick = async ()=>{ if(!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; $('installBtn').style.display='none'; };
+window.addEventListener('appinstalled',()=>{ $('installBtn').style.display='none'; toast('App wurde installiert. 🎉'); });
 
 /* ---------- Init ---------- */
 renderFilters();
 render();
+autoBackup();
+setInterval(autoBackup, 5*60*1000);
+scheduleAutoDownload();
 </script>
 </body>
 </html>

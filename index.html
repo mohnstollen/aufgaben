@@ -35,8 +35,7 @@
     background:rgba(15,20,32,.85); backdrop-filter:blur(10px);
     border-bottom:1px solid var(--border);
   }
-  h1{margin:0 0 4px; font-size:22px; letter-spacing:.3px}
-  .sub{color:var(--muted); font-size:13px}
+  h1{margin:0; font-size:22px; letter-spacing:.3px}
   .wrap{max-width:920px; margin:0 auto; padding:18px 20px 120px}
 
   .toolbar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:16px}
@@ -52,7 +51,6 @@
     background:var(--surface); color:var(--text); font-size:13px; cursor:pointer;
   }
   .ctrl:hover{border-color:var(--accent)}
-  #installBtn{display:none; background:var(--accent); border-color:var(--accent); color:#fff}
 
   .filters{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px}
   .chip{
@@ -151,9 +149,13 @@
   .btn.primary:hover{background:var(--accent-hover)}
   .btn.ghost{background:var(--surface2); color:var(--text); border:1px solid var(--border)}
   .btn.ghost:hover{border-color:var(--accent)}
-  .btn.danger{background:var(--red); color:#fff}
+  .btn.block{width:100%; text-align:left; margin-bottom:8px; display:flex; align-items:center; gap:10px}
 
-  /* Quick-entry (todo.txt) */
+  .set-group{margin-bottom:16px}
+  .set-group h3{font-size:12px; color:var(--muted); margin:0 0 8px; text-transform:uppercase; letter-spacing:.6px}
+  .set-row2{display:flex; gap:8px}
+  .set-row2 .btn{flex:1; justify-content:center}
+
   .quick{background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:16px}
   .quick label{display:block; font-size:12.5px; color:var(--muted); margin-bottom:6px}
   .quick input{width:100%; padding:11px 12px; border-radius:10px; border:1px solid var(--accent); background:var(--surface); color:var(--text); font-size:16px}
@@ -192,7 +194,6 @@
 <header>
   <div class="wrap" style="padding-bottom:0">
     <h1>📋 Aufgabenverwaltung</h1>
-    <div class="sub">Alle Daten werden lokal auf deinem Gerät gespeichert (Local Storage).</div>
   </div>
 </header>
 
@@ -208,12 +209,7 @@
       <option value="name">Sortieren: Name</option>
       <option value="created">Sortieren: Erstellt</option>
     </select>
-    <button id="manageBtn" class="ctrl">⚙️ Tags &amp; Projekte</button>
-    <button id="exportBtn" class="ctrl" title="Alle Daten als JSON-Datei sichern">⬇️ JSON</button>
-    <button id="exportTxtBtn" class="ctrl" title="Als todo.txt exportieren">📄 todo.txt</button>
-    <button id="importBtn" class="ctrl" title="JSON- oder todo.txt-Datei einlesen">⬆️ Import</button>
-    <button id="backupsBtn" class="ctrl" title="Backups verwalten">🗄️ Backups</button>
-    <button id="installBtn" class="ctrl" title="App installieren">📲 Installieren</button>
+    <button id="settingsBtn" class="ctrl">⚙️ Einstellungen</button>
     <input type="file" id="importFile" accept="application/json,.json,text/plain,.txt" style="display:none">
   </div>
 
@@ -238,7 +234,7 @@
 
     <div class="quick" id="quickBox">
       <label>Schnelleingabe (todo.txt-Stil)</label>
-      <input type="text" id="fQuick" placeholder="Angebot prüfen @Schaltschrank #wichtig #büro 2026-09-15 (A)" autocomplete="off">
+      <input type="text" id="fQuick" placeholder="Neue Aufgabe @Projekt #tag1 YYYY-MM-DD" autocomplete="off">
       <div class="syntax">
         <code>@Projekt</code> · <code>#tag</code> (mehrfach) · <code>YYYY-MM-DD</code> Fälligkeit · <code>(A)</code>/<code>(B)</code>/<code>(C)</code> = Hoch/Mittel/Niedrig
       </div>
@@ -280,6 +276,45 @@
     <div class="modal-actions">
       <button class="btn ghost" id="cancelTask">Abbrechen</button>
       <button class="btn primary" id="saveTask">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="overlay" id="settingsOverlay">
+  <div class="modal">
+    <h2>⚙️ Einstellungen</h2>
+
+    <div class="set-group">
+      <h3>Organisation</h3>
+      <button class="btn ghost block" id="manageBtn">🏷️ Tags &amp; Projekte verwalten</button>
+    </div>
+
+    <div class="set-group">
+      <h3>Daten exportieren</h3>
+      <div class="set-row2">
+        <button class="btn ghost" id="exportTxtBtn">📄 todo.txt</button>
+        <button class="btn ghost" id="exportBtn">⬇️ JSON</button>
+      </div>
+    </div>
+
+    <div class="set-group">
+      <h3>Daten importieren</h3>
+      <button class="btn ghost block" id="importBtn">⬆️ Datei importieren (JSON oder todo.txt)</button>
+    </div>
+
+    <div class="set-group">
+      <h3>Sicherung</h3>
+      <button class="btn ghost block" id="backupsBtn">🗄️ Backups verwalten</button>
+    </div>
+
+    <div class="set-group" id="installGroup" style="display:none">
+      <h3>App</h3>
+      <button class="btn ghost block" id="installBtn">📲 App installieren</button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn primary" id="closeSettings">Fertig</button>
     </div>
   </div>
 </div>
@@ -364,7 +399,6 @@
       <button class="btn ghost" id="downloadLatestTxt">📄 Aktuellen Stand jetzt als todo.txt herunterladen</button>
     </div>
 
-    <!-- Aufräum-Hinweis für heruntergeladene Dateien -->
     <div class="manage-group" id="cleanupGroup" style="display:none">
       <h3>🧹 Alte Download-Dateien aufräumen</h3>
       <p class="hint" style="font-size:12px; margin:0 0 8px">
@@ -392,9 +426,9 @@
 const LS_KEY = 'taskmanager_v1';
 const LS_TXT = 'taskmanager_todotxt';
 const LS_TXT_HIST = 'taskmanager_todotxt_history';
-const LS_AUTODL = 'taskmanager_autodl';          // { enabled, lastDate }
-const LS_RETENTION = 'taskmanager_retention';    // Zahl Tage
-const LS_DL_REGISTRY = 'taskmanager_dl_registry';// [{date, filename}]
+const LS_AUTODL = 'taskmanager_autodl';
+const LS_RETENTION = 'taskmanager_retention';
+const LS_DL_REGISTRY = 'taskmanager_dl_registry';
 const defaultData = { tasks:[], projects:['Allgemein'], tags:['wichtig'] };
 let data = load();
 
@@ -494,7 +528,7 @@ function parseTodoTxtFile(content){
   return { tasks, projects, tags };
 }
 
-/* ---------- Interne Snapshots (mit Aufbewahrung) ---------- */
+/* ---------- Interne Snapshots ---------- */
 function autoBackup(){
   try{
     const text = buildTodoTxt();
@@ -509,38 +543,28 @@ function autoBackup(){
     localStorage.setItem(LS_TXT_HIST, JSON.stringify(hist));
   }catch(e){ console.warn('Auto-Backup fehlgeschlagen:', e); }
 }
-// Nach Datum bereinigen: alles älter als Aufbewahrung raus (mind. 1 behalten)
 function pruneByRetention(hist){
   const keepDays = getRetention();
   const today = new Date(); today.setHours(0,0,0,0);
-  let out = hist.filter(h=>{
-    const d = new Date(h.date+'T00:00:00');
-    return daysBetween(today, d) < keepDays;
-  });
-  if(!out.length && hist.length){ out=[hist[hist.length-1]]; } // Sicherheitsnetz: letzten behalten
-  return out.slice(-Math.max(keepDays, 1)).slice(-365);
+  let out = hist.filter(h=>{ const d=new Date(h.date+'T00:00:00'); return daysBetween(today,d) < keepDays; });
+  if(!out.length && hist.length){ out=[hist[hist.length-1]]; }
+  return out.slice(-Math.max(keepDays,1)).slice(-365);
 }
 
-/* ---------- Download-Register (heruntergeladene Dateien) ---------- */
+/* ---------- Download-Register ---------- */
 function getRegistry(){ try{ return JSON.parse(localStorage.getItem(LS_DL_REGISTRY))||[]; }catch(e){ return []; } }
 function setRegistry(r){ localStorage.setItem(LS_DL_REGISTRY, JSON.stringify(r)); }
 function recordDownload(filename){
-  const reg=getRegistry();
-  const date=toDateStr(Date.now());
+  const reg=getRegistry(); const date=toDateStr(Date.now());
   if(!reg.some(x=>x.filename===filename)) reg.push({ date, filename, ts:Date.now() });
   setRegistry(reg.slice(-400));
 }
-// liefert veraltete Einträge (älter als Aufbewahrung)
 function staleDownloads(){
-  const keepDays=getRetention();
-  const today=new Date(); today.setHours(0,0,0,0);
-  return getRegistry().filter(x=>{
-    const d=new Date(x.date+'T00:00:00');
-    return daysBetween(today,d) >= keepDays;
-  });
+  const keepDays=getRetention(); const today=new Date(); today.setHours(0,0,0,0);
+  return getRegistry().filter(x=>{ const d=new Date(x.date+'T00:00:00'); return daysBetween(today,d) >= keepDays; });
 }
 
-/* ---------- Auto-Download (täglich in Downloads) ---------- */
+/* ---------- Auto-Download ---------- */
 function getAutoDl(){ try{ return JSON.parse(localStorage.getItem(LS_AUTODL))||{enabled:false,lastDate:null}; }catch(e){ return {enabled:false,lastDate:null}; } }
 function setAutoDl(o){ localStorage.setItem(LS_AUTODL, JSON.stringify(o)); }
 function scheduleAutoDownload(){
@@ -553,27 +577,21 @@ function scheduleAutoDownload(){
     const c = getAutoDl();
     if(c.lastDate === today){ cleanup(); return; }
     const fn = `todo_${today}.txt`;
-    downloadText(buildTodoTxt(), fn, 'text/plain');
-    recordDownload(fn);
+    downloadText(buildTodoTxt(), fn, 'text/plain'); recordDownload(fn);
     c.lastDate = today; setAutoDl(c);
     const stale = staleDownloads();
     toast(stale.length ? `Tages-Backup gespeichert 📄 · ${stale.length} alte Datei(en) zum Aufräumen` : 'Tägliches Backup in Downloads gespeichert 📄');
     cleanup();
   };
-  const cleanup = ()=>{
-    window.removeEventListener('pointerdown', doit);
-    window.removeEventListener('keydown', doit);
-  };
-  window.addEventListener('pointerdown', doit);
-  window.addEventListener('keydown', doit);
+  const cleanup = ()=>{ window.removeEventListener('pointerdown', doit); window.removeEventListener('keydown', doit); };
+  window.addEventListener('pointerdown', doit); window.addEventListener('keydown', doit);
 }
 
 /* ---------- Download helper ---------- */
 function downloadText(text, filename, mime){
   const blob = new Blob([text], { type: mime||'text/plain' });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = filename;
+  const a = document.createElement('a'); a.href=url; a.download=filename;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(url), 1500);
 }
@@ -655,16 +673,8 @@ function taskCard(t){
 function prioIcon(p){ return p==='Hoch'?'🔴':p==='Mittel'?'🟡':'🟢'; }
 
 /* ---------- Task actions ---------- */
-function toggleDone(id){
-  const t = data.tasks.find(x=>x.id===id); if(!t) return;
-  t.done = !t.done; t.doneAt = t.done ? Date.now() : null;
-  save(); render();
-}
-function delTask(id){
-  if(!confirm('Diese Aufgabe wirklich löschen?')) return;
-  data.tasks = data.tasks.filter(x=>x.id!==id);
-  save(); render();
-}
+function toggleDone(id){ const t=data.tasks.find(x=>x.id===id); if(!t)return; t.done=!t.done; t.doneAt=t.done?Date.now():null; save(); render(); }
+function delTask(id){ if(!confirm('Diese Aufgabe wirklich löschen?'))return; data.tasks=data.tasks.filter(x=>x.id!==id); save(); render(); }
 
 /* ---------- Schnelleingabe-Parser ---------- */
 function parseQuick(text){
@@ -684,9 +694,7 @@ function parseQuick(text){
 }
 function syncQuickToFields(){
   const parsed = parseQuick($('fQuick').value);
-  $('fName').value = parsed.name;
-  $('fDue').value  = parsed.due || '';
-  $('fPrio').value = parsed.prio || 'Mittel';
+  $('fName').value = parsed.name; $('fDue').value = parsed.due||''; $('fPrio').value = parsed.prio||'Mittel';
   const projSel = $('fProject');
   if(parsed.project){
     if(![...projSel.options].some(o=>o.value===parsed.project)){
@@ -742,6 +750,10 @@ function saveTask(){
   else{ data.tasks.push({ id:uid(), name, due:$('fDue').value||null, prio:$('fPrio').value, project, tags, done:false, doneAt:null, created:Date.now() }); }
   save(); closeTask(); renderFilters(); render();
 }
+
+/* ---------- Settings modal ---------- */
+function openSettings(){ $('settingsOverlay').classList.add('show'); }
+function closeSettings(){ $('settingsOverlay').classList.remove('show'); }
 
 /* ---------- Manage modal ---------- */
 function openManage(){ renderManage(); $('manageOverlay').classList.add('show'); }
@@ -918,16 +930,18 @@ function toast(msg){ const el=$('toast'); el.textContent=msg; el.classList.add('
 $('fab').onclick = ()=>openTask();
 $('cancelTask').onclick = closeTask;
 $('saveTask').onclick = saveTask;
-$('manageBtn').onclick = openManage;
+$('settingsBtn').onclick = openSettings;
+$('closeSettings').onclick = closeSettings;
+$('manageBtn').onclick = ()=>{ closeSettings(); openManage(); };
 $('closeManage').onclick = closeManage;
-$('exportBtn').onclick = exportData;
-$('exportTxtBtn').onclick = exportTodoTxt;
-$('importBtn').onclick = triggerImport;
+$('exportBtn').onclick = ()=>{ exportData(); };
+$('exportTxtBtn').onclick = ()=>{ exportTodoTxt(); };
+$('importBtn').onclick = ()=>{ closeSettings(); triggerImport(); };
 $('importFile').onchange = handleImportFile;
 $('importMode').onchange = updateImportHint;
 $('cancelImport').onclick = ()=>{ pendingImport=null; $('importOverlay').classList.remove('show'); };
 $('confirmImport').onclick = confirmImport;
-$('backupsBtn').onclick = openBackups;
+$('backupsBtn').onclick = ()=>{ closeSettings(); openBackups(); };
 $('closeBackup').onclick = closeBackups;
 $('downloadLatestTxt').onclick = ()=>{ const fn=`todo_${toDateStr(Date.now())}.txt`; downloadText(buildTodoTxt(), fn, 'text/plain'); recordDownload(fn); renderCleanup(); toast('Aktuelles todo.txt heruntergeladen.'); };
 $('autoDlToggle').onchange = (e)=>{
@@ -937,7 +951,6 @@ $('autoDlToggle').onchange = (e)=>{
 };
 $('retentionSel').onchange = (e)=>{
   setRetention(parseInt(e.target.value,10));
-  // sofort anwenden: Snapshots bereinigen + Cleanup neu berechnen
   let hist=[]; try{ hist=JSON.parse(localStorage.getItem(LS_TXT_HIST))||[]; }catch(_){}
   localStorage.setItem(LS_TXT_HIST, JSON.stringify(pruneByRetention(hist)));
   renderBackups(); renderCleanup();
@@ -945,7 +958,6 @@ $('retentionSel').onchange = (e)=>{
 };
 $('clearRegistry').onclick = ()=>{
   if(!confirm('Aufräum-Liste zurücksetzen? (Nur die Merkliste in der App wird geleert – Dateien in Downloads bleiben unberührt.)')) return;
-  // nur veraltete Einträge entfernen, aktuelle behalten
   const keepDays=getRetention(); const today=new Date(); today.setHours(0,0,0,0);
   const kept=getRegistry().filter(x=>daysBetween(today,new Date(x.date+'T00:00:00'))<keepDays);
   setRegistry(kept); renderCleanup(); toast('Aufräum-Liste zurückgesetzt.');
@@ -965,10 +977,10 @@ $('newProj').addEventListener('keydown',e=>{ if(e.key==='Enter') $('addProj').cl
 $('newTag').addEventListener('keydown',e=>{ if(e.key==='Enter') $('addTag').click(); });
 $('fName').addEventListener('keydown',e=>{ if(e.key==='Enter') saveTask(); });
 
-[ 'taskOverlay','manageOverlay','importOverlay','backupOverlay' ].forEach(id=>{
+[ 'taskOverlay','settingsOverlay','manageOverlay','importOverlay','backupOverlay' ].forEach(id=>{
   $(id).addEventListener('click',e=>{ if(e.target.id===id){ $(id).classList.remove('show'); } });
 });
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeTask(); closeManage(); $('importOverlay').classList.remove('show'); closeBackups(); } });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeTask(); closeSettings(); closeManage(); $('importOverlay').classList.remove('show'); closeBackups(); } });
 
 function switchView(v){ view=v; $('tabActive').classList.toggle('active',v==='active'); $('tabArchive').classList.toggle('active',v==='archive'); render(); }
 
@@ -977,9 +989,9 @@ if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(err=>console.warn('SW-Registrierung fehlgeschlagen:',err)); });
 }
 let deferredPrompt=null;
-window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferredPrompt=e; $('installBtn').style.display='inline-block'; });
-$('installBtn').onclick = async ()=>{ if(!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; $('installBtn').style.display='none'; };
-window.addEventListener('appinstalled',()=>{ $('installBtn').style.display='none'; toast('App wurde installiert. 🎉'); });
+window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferredPrompt=e; $('installGroup').style.display='block'; });
+$('installBtn').onclick = async ()=>{ if(!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; $('installGroup').style.display='none'; };
+window.addEventListener('appinstalled',()=>{ $('installGroup').style.display='none'; toast('App wurde installiert. 🎉'); });
 
 /* ---------- Init ---------- */
 renderFilters();

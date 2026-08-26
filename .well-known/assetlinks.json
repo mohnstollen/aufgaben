@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "io.github.mohnstollen.twa",
+        "sha256_cert_fingerprints": ["0C:FC:02:AB:90:58:57:63:8B:9A:5E:58:02:41:E3:91:81:EB:0D:E0:C4:1D:9E:E4:80:E8:03:43:33:DE:C7:CD"]
+      }
+    }]

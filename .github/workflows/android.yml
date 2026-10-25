@@ -5,6 +5,8 @@ name: Android-APK
 # - Bei einem Tag "v*" (z. B. v1.2.0): zusätzlich GitHub-Release mit der APK
 on:
   push:
+    # Ohne "branches" würden bei gesetztem "tags"-Filter Branch-Pushes ignoriert
+    branches: ["**"]
     paths:
       - "index.html"
       - "sw.js"

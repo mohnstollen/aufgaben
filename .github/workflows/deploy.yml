@@ -31,11 +31,16 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
+      - name: Web-App zusammenstellen
+        # Nur die Web-App veröffentlichen (ohne android/, scripts/ usw.)
+        run: |
+          node scripts/build-web.mjs
+          cp -r .well-known .nojekyll www/
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Der gesamte Repo-Root wird veröffentlicht
-          path: "."
+          path: "www"
 
       - name: Deploy to GitHub Pages
         id: deployment

@@ -7,3 +7,11 @@ Thumbs.db
 
 # Backups (lokale Exporte nicht versionieren)
 aufgaben-backup_*.json
+
+# Node / Capacitor
+node_modules/
+www/
+
+# Signier-Schlüssel nie einchecken
+*.keystore
+*.jks

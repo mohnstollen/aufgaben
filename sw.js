@@ -1,5 +1,5 @@
 /* Service Worker – Aufgabenverwaltung PWA */
-const CACHE = 'aufgaben-v7';
+const CACHE = 'aufgaben-v9';
 const ASSETS = [
   './','./index.html','./manifest.webmanifest',
   './icons/icon-192.png','./icons/icon-512.png','./icons/icon-maskable-512.png',
@@ -14,6 +14,8 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const { request } = e;
   if (request.method !== 'GET') return;
+  // Fremde Server (z. B. Nextcloud-WebDAV) nie aus dem Cache bedienen
+  if (new URL(request.url).origin !== self.location.origin) return;
   e.respondWith(caches.match(request).then(cached => {
     if (cached) return cached;
     return fetch(request).then(resp => {

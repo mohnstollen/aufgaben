@@ -1,0 +1,98 @@
+name: Android-APK
+
+# Baut die Android-App (Capacitor) aus der Web-App.
+# - Bei jedem Push mit relevanten Änderungen: APK als Workflow-Artefakt
+# - Bei einem Tag "v*" (z. B. v1.2.0): zusätzlich GitHub-Release mit der APK
+on:
+  push:
+    paths:
+      - "index.html"
+      - "sw.js"
+      - "manifest.webmanifest"
+      - "icons/**"
+      - "android/**"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+      - "capacitor.config.json"
+      - ".github/workflows/android.yml"
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: Web-App in das Android-Projekt übernehmen
+        run: npm run sync
+
+      - name: Version bestimmen
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "VERSION_NAME=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION_NAME=0.0.${{ github.run_number }}-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+          fi
+          echo "VERSION_CODE=${{ github.run_number }}" >> "$GITHUB_ENV"
+
+      - name: Signier-Schlüssel bereitstellen
+        if: env.HAS_KEYSTORE == 'true'
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+      - name: APK bauen (signiert)
+        if: env.HAS_KEYSTORE == 'true'
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          ./gradlew --no-daemon assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/aufgaben-$VERSION_NAME.apk"
+
+      - name: APK bauen (Debug – kein Signier-Schlüssel hinterlegt)
+        if: env.HAS_KEYSTORE != 'true'
+        working-directory: android
+        run: |
+          echo "::warning::Kein Signier-Schlüssel in den Secrets – es wird eine Debug-APK gebaut. Updates erfordern dann eine Neuinstallation (siehe README)."
+          ./gradlew --no-daemon assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/aufgaben-$VERSION_NAME-debug.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aufgaben-apk-${{ env.VERSION_NAME }}
+          path: ${{ runner.temp }}/aufgaben-*.apk
+          if-no-files-found: error
+
+      - name: Release veröffentlichen
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ runner.temp }}/aufgaben-*.apk
+          generate_release_notes: true

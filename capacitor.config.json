@@ -1,0 +1,14 @@
+{
+  "appId": "io.github.mohnstollen.aufgaben",
+  "appName": "Aufgaben",
+  "webDir": "www",
+  "backgroundColor": "#0f1420",
+  "android": {
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "SystemBars": {
+      "style": "DARK"
+    }
+  }
+}

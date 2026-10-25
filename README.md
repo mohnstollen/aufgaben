@@ -1,7 +1,8 @@
 # 📋 Aufgabenverwaltung (PWA)
 
-Eine installierbare, offline-fähige Aufgaben-App. Alle Daten bleiben **lokal** auf dem
-Gerät (Local Storage) – kein Server, kein Konto, kein Tracking.
+Eine installierbare, offline-fähige Aufgaben-App. Die Daten liegen **lokal** auf dem
+Gerät (Local Storage) – kein Konto, kein Tracking. Optional lassen sie sich über die
+**eigene Nextcloud** zwischen mehreren Geräten synchronisieren.
 
 ## Features
 - Aufgaben mit Name, Fälligkeitsdatum, Priorität, Tags und Projekt
@@ -9,7 +10,8 @@ Gerät (Local Storage) – kein Server, kein Konto, kein Tracking.
 - Filtern nach Tags & Projekten, Live-Suche
 - Tags und Projekte bearbeiten/löschen
 - Erledigte Aufgaben abhaken → landen im Archiv
-- **Export/Import** als JSON-Backup
+- **Export/Import** als JSON-Backup oder todo.txt
+- **Nextcloud-Sync** per WebDAV (optional)
 - **PWA**: installierbar, offline nutzbar
 
 ---
@@ -65,11 +67,47 @@ Nach Änderungen einfach neu pushen:
 ```bash
 git add -A && git commit -m "Update" && git push
 ```
-Die Service-Worker-Cache-Version steht in `sw.js` (`const CACHE = 'aufgaben-v1'`).
+Die Service-Worker-Cache-Version steht in `sw.js` (`const CACHE = 'aufgaben-v8'`).
 Bei größeren Änderungen die Zahl erhöhen (z. B. `aufgaben-v2`), damit Clients frisch laden.
 
+## ☁️ Synchronisation mit Nextcloud
+Die App speichert alle Aufgaben als JSON-Datei in Deiner Nextcloud (Standard:
+`Aufgaben/aufgaben.json`). Jedes Gerät lädt die Datei, führt sie mit dem lokalen Stand
+zusammen und lädt das Ergebnis wieder hoch.
+
+### Einmalig in der Nextcloud
+1. **App-Passwort anlegen:** Persönliche Einstellungen → Sicherheit → „Neues App-Passwort
+   erstellen". Am besten ein eigenes pro Gerät, damit es sich einzeln widerrufen lässt.
+2. **CORS freischalten:** Ab Werk erlaubt Nextcloud keine WebDAV-Zugriffe von anderen
+   Webseiten. Als Admin die App **„WebAppPassword"** installieren und in ihren Einstellungen
+   die Adresse der Aufgaben-App als erlaubte WebDAV-Origin eintragen, z. B.
+   `https://<DEIN-USER>.github.io` (nur Schema + Host, ohne Pfad).
+   Alternativ kann ein Reverse-Proxy vor der Nextcloud die CORS-Header setzen
+   (erlaubte Methoden: `GET, PUT, MKCOL, OPTIONS`; Header: `Authorization, Content-Type, If-Match`;
+   `Access-Control-Expose-Headers: ETag`).
+
+### In der App
+**⚙️ Einstellungen → ☁️ Nextcloud-Sync einrichten**: Adresse, Benutzername, App-Passwort und
+Dateipfad eintragen, **Verbindung testen**, dann **Speichern & synchronisieren**. Auf allen
+Geräten denselben Dateipfad verwenden.
+
+- Synchronisiert wird beim Start, beim Zurückkehren in die App, kurz nach jeder Änderung,
+  alle 5 Minuten und per Tipp auf den Status oben rechts.
+- Offline geht nichts verloren: Änderungen werden beim nächsten Sync übertragen.
+- Konflikte: Pro Aufgabe gewinnt die zuletzt geänderte Version. Ändern zwei Geräte **dieselbe**
+  Aufgabe, bevor sie synchronisiert haben, setzt sich die spätere Änderung vollständig durch.
+- Gelöschte Aufgaben werden 180 Tage lang als „gelöscht" vermerkt, damit sie nicht von einem
+  anderen Gerät wieder auftauchen.
+- Optional legt die App zusätzlich eine `todo.txt` im selben Ordner ab (nur Export, wird
+  nicht zurückgelesen).
+- Die Datei hat dasselbe Format wie der JSON-Export und kann auch direkt importiert werden.
+- Zugangsdaten liegen nur im Local Storage des jeweiligen Geräts.
+- Die Nextcloud muss per **https://** erreichbar sein: Eine HTTPS-Seite darf keine
+  unverschlüsselten Adressen aufrufen.
+
 ## 💾 Datensicherung
-Daten liegen pro Gerät/Browser. Zum Übertragen zwischen Geräten den **Export/Import** nutzen.
+Ohne Sync liegen die Daten pro Gerät/Browser. Zum Übertragen dann den **Export/Import** nutzen.
+Beim Zusammenführen werden doppelte Aufgaben übersprungen.
 
 ## 📁 Projektstruktur
 ```

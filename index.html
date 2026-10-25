@@ -188,12 +188,27 @@
   .inline-select select{width:auto; padding:7px 10px; font-size:14px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text)}
   .fname{font-family:ui-monospace,Consolas,monospace; font-size:12.5px}
   .stale-tag{font-size:10.5px; color:#ffd27a; background:rgba(255,176,32,.15); padding:2px 7px; border-radius:12px; margin-left:6px}
+
+  .head-row{display:flex; align-items:center; justify-content:space-between; gap:12px}
+  .head-row h1{min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .sync-pill{
+    padding:6px 12px; border-radius:20px; border:1px solid var(--border); background:var(--surface);
+    color:var(--muted); font-size:12.5px; cursor:pointer; white-space:nowrap; flex-shrink:0;
+  }
+  @media (max-width:480px){ header{padding-left:4px; padding-right:4px} h1{font-size:19px} }
+  .sync-pill:hover{border-color:var(--accent)}
+  .sync-pill.ok{color:#8ee6b4}
+  .sync-pill.busy{color:#9dc0ff}
+  .sync-pill.err{color:#ff9aa4; border-color:rgba(255,92,108,.5)}
+  .sync-pill.off{color:#ffd27a}
+  .modal code{background:var(--surface2); padding:1px 6px; border-radius:5px; color:#c3b8ff}
 </style>
 </head>
 <body>
 <header>
-  <div class="wrap" style="padding-bottom:0">
+  <div class="wrap head-row" style="padding-bottom:0">
     <h1>📋 Aufgabenverwaltung</h1>
+    <button id="syncStatus" class="sync-pill" style="display:none" title="Jetzt synchronisieren"></button>
   </div>
 </header>
 
@@ -288,6 +303,11 @@
     <div class="set-group">
       <h3>Organisation</h3>
       <button class="btn ghost block" id="manageBtn">🏷️ Tags &amp; Projekte verwalten</button>
+    </div>
+
+    <div class="set-group">
+      <h3>Synchronisation</h3>
+      <button class="btn ghost block" id="syncSetupBtn">☁️ Nextcloud-Sync einrichten</button>
     </div>
 
     <div class="set-group">
@@ -421,6 +441,60 @@
   </div>
 </div>
 
+<!-- Sync Modal -->
+<div class="overlay" id="syncOverlay">
+  <div class="modal">
+    <h2>☁️ Nextcloud-Sync</h2>
+    <div class="field">
+      <label>Nextcloud-Adresse</label>
+      <input type="url" id="syncUrl" placeholder="https://cloud.example.de" autocomplete="off" autocapitalize="off">
+      <div class="hint">Die Adresse Deiner Nextcloud. Die vollständige WebDAV-Adresse (…/remote.php/dav/files/NAME) funktioniert auch.</div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Benutzername</label>
+        <input type="text" id="syncUser" autocomplete="username" autocapitalize="off">
+      </div>
+      <div class="field">
+        <label>App-Passwort</label>
+        <input type="password" id="syncPass" autocomplete="current-password">
+      </div>
+    </div>
+    <div class="field">
+      <label>Datei in der Nextcloud</label>
+      <input type="text" id="syncPath" placeholder="Aufgaben/aufgaben.json" autocapitalize="off">
+      <div class="hint">Fehlende Ordner werden angelegt. Alle Geräte müssen dieselbe Datei verwenden.</div>
+    </div>
+    <div class="field">
+      <div class="switch-row">
+        <span class="lbl">Automatisch synchronisieren</span>
+        <label class="switch"><input type="checkbox" id="syncAuto" checked><span class="slider"></span></label>
+      </div>
+      <div class="switch-row" style="margin-top:8px">
+        <span class="lbl">Zusätzlich <code>todo.txt</code> im selben Ordner ablegen</span>
+        <label class="switch"><input type="checkbox" id="syncTodoTxt"><span class="slider"></span></label>
+      </div>
+    </div>
+    <div class="field">
+      <div id="syncInfo" class="hint" style="font-size:13px"></div>
+    </div>
+    <details class="field hint" style="font-size:12px">
+      <summary style="cursor:pointer">Einrichtung in der Nextcloud (einmalig)</summary>
+      <ol style="padding-left:18px; line-height:1.55">
+        <li><b>App-Passwort</b> anlegen: Persönliche Einstellungen → Sicherheit → „Neues App-Passwort erstellen". Nicht das normale Passwort verwenden.</li>
+        <li>Als Admin die Nextcloud-App <b>„WebAppPassword"</b> installieren. Nextcloud erlaubt WebDAV-Zugriffe von anderen Webseiten sonst nicht (CORS).</li>
+        <li>In den Einstellungen von WebAppPassword unter den erlaubten WebDAV-Origins eintragen: <code id="syncOrigin"></code></li>
+      </ol>
+      Die Zugangsdaten werden nur auf diesem Gerät gespeichert (im Local Storage des Browsers).
+    </details>
+    <div class="modal-actions">
+      <button class="btn ghost" id="syncDisconnect">Trennen</button>
+      <button class="btn ghost" id="syncTest">Verbindung testen</button>
+      <button class="btn primary" id="syncSave">Speichern &amp; synchronisieren</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ---------- Storage keys ---------- */
 const LS_KEY = 'taskmanager_v1';
@@ -429,18 +503,92 @@ const LS_TXT_HIST = 'taskmanager_todotxt_history';
 const LS_AUTODL = 'taskmanager_autodl';
 const LS_RETENTION = 'taskmanager_retention';
 const LS_DL_REGISTRY = 'taskmanager_dl_registry';
-const defaultData = { tasks:[], projects:['Allgemein'], tags:['wichtig'] };
+const LS_SYNC = 'taskmanager_sync';
+const TOMBSTONE_DAYS = 180;
+/* tombstones: { taskId: gelöschtAm }, listLog: { 'p:Name'|'t:Name': {ts, del} } – nötig für den Sync */
+const defaultData = { tasks:[], projects:['Allgemein'], tags:['wichtig'], tombstones:{}, listLog:{} };
 let data = load();
+let snapshot = takeSnapshot(data);
 
 function load(){
   try{
     const d = JSON.parse(localStorage.getItem(LS_KEY));
     if(!d) return structuredClone(defaultData);
-    return Object.assign(structuredClone(defaultData), d);
+    return normalizeData(Object.assign(structuredClone(defaultData), d));
   }catch(e){ return structuredClone(defaultData); }
 }
-function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); autoBackup(); }
+/* Migration: ältere Datensätze ohne updatedAt/Tombstones ergänzen */
+function normalizeData(d){
+  if(!Array.isArray(d.tasks)) d.tasks=[];
+  if(!Array.isArray(d.projects)) d.projects=[];
+  if(!Array.isArray(d.tags)) d.tags=[];
+  if(!d.tombstones || typeof d.tombstones!=='object') d.tombstones={};
+  if(!d.listLog || typeof d.listLog!=='object') d.listLog={};
+  d.tasks.forEach(t=>{ if(!t.id) t.id=uid(); if(!t.updatedAt) t.updatedAt=t.doneAt||t.created||0; });
+  if(!d.projects.length) d.projects=['Allgemein'];
+  return d;
+}
+function persist(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); }
+function save(){ trackChanges(); persist(); autoBackup(); scheduleSync(); }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+/* ---------- Änderungsverfolgung ----------
+   Vergleicht den aktuellen Stand mit dem zuletzt gespeicherten: geänderte Aufgaben bekommen
+   ein neues updatedAt, entfernte einen Tombstone; neue/entfernte Tags & Projekte landen im listLog. */
+function taskSig(t){ const { updatedAt, ...rest } = t; return JSON.stringify(rest); }
+function takeSnapshot(d){
+  return { tasks:new Map(d.tasks.map(t=>[t.id, taskSig(t)])), projects:new Set(d.projects), tags:new Set(d.tags) };
+}
+function trackChanges(){
+  const now=Date.now(); const ids=new Set();
+  data.tasks.forEach(t=>{
+    ids.add(t.id);
+    if(snapshot.tasks.get(t.id)!==taskSig(t)){ t.updatedAt=now; delete data.tombstones[t.id]; }
+  });
+  snapshot.tasks.forEach((_,id)=>{ if(!ids.has(id)) data.tombstones[id]=now; });
+  [['p','projects'],['t','tags']].forEach(([k,key])=>{
+    const cur=new Set(data[key]);
+    cur.forEach(n=>{ if(!snapshot[key].has(n)) data.listLog[k+':'+n]={ ts:now, del:false }; });
+    snapshot[key].forEach(n=>{ if(!cur.has(n)) data.listLog[k+':'+n]={ ts:now, del:true }; });
+  });
+  snapshot=takeSnapshot(data);
+}
+
+/* ---------- Zusammenführen zweier Datenstände (lokal + Server) ---------- */
+function newerTask(a,b){
+  const ua=a.updatedAt||0, ub=b.updatedAt||0;
+  if(ua!==ub) return ua>ub?a:b;
+  return JSON.stringify(a)>=JSON.stringify(b)?a:b;   // deterministisch bei Gleichstand
+}
+function mergeData(a,b){
+  const tombstones={...a.tombstones};
+  Object.entries(b.tombstones||{}).forEach(([id,ts])=>{ if(!(tombstones[id]>=ts)) tombstones[id]=ts; });
+  const minTs=Date.now()-TOMBSTONE_DAYS*86400000;
+  Object.keys(tombstones).forEach(id=>{ if(tombstones[id]<minTs) delete tombstones[id]; });
+
+  const map=new Map();
+  [...a.tasks, ...(b.tasks||[])].forEach(t=>{ const ex=map.get(t.id); map.set(t.id, ex?newerTask(ex,t):t); });
+  const tasks=[...map.values()].filter(t=>!(tombstones[t.id]>=(t.updatedAt||0))).map(t=>({...t}));
+
+  const listLog={...a.listLog};
+  Object.entries(b.listLog||{}).forEach(([k,e])=>{ if(!listLog[k] || e.ts>listLog[k].ts) listLog[k]=e; });
+  const mergeList=(k,la,lb,used)=>{
+    const out=[];
+    [...la,...lb].forEach(n=>{ if(out.includes(n)) return; const e=listLog[k+':'+n]; if(e&&e.del) return; out.push(n); });
+    used.forEach(n=>{ if(n && !out.includes(n)) out.push(n); });
+    return out;
+  };
+  const projects=mergeList('p', a.projects, b.projects||[], tasks.map(t=>t.project));
+  const tags=mergeList('t', a.tags, b.tags||[], tasks.flatMap(t=>t.tags||[]));
+  if(!projects.length) projects.push('Allgemein');
+  return { tasks, projects, tags, tombstones, listLog };
+}
+/* Reihenfolge-unabhängige Darstellung, um "hat sich etwas geändert?" zu prüfen */
+function canon(d){
+  const sortObj=o=>Object.keys(o||{}).sort().map(k=>[k,o[k]]);
+  return JSON.stringify([ [...d.tasks].sort((x,y)=>x.id<y.id?-1:1), [...d.projects].sort(), [...d.tags].sort(),
+    sortObj(d.tombstones), sortObj(d.listLog) ]);
+}
 
 /* ---------- State ---------- */
 let view = 'active';
@@ -746,7 +894,8 @@ function saveTask(){
   let project = $('fProject').value;
   if(project && !data.projects.includes(project)) data.projects.push(project);
   const id = $('taskId').value;
-  if(id){ const t=data.tasks.find(x=>x.id===id); Object.assign(t,{ name, due:$('fDue').value||null, prio:$('fPrio').value, project, tags }); }
+  const existing = id && data.tasks.find(x=>x.id===id);   // kann inzwischen per Sync gelöscht sein
+  if(existing){ Object.assign(existing,{ name, due:$('fDue').value||null, prio:$('fPrio').value, project, tags }); }
   else{ data.tasks.push({ id:uid(), name, due:$('fDue').value||null, prio:$('fPrio').value, project, tags, done:false, doneAt:null, created:Date.now() }); }
   save(); closeTask(); renderFilters(); render();
 }
@@ -863,12 +1012,19 @@ function confirmImport(){
     data.tasks.forEach(t=>{ if(t.project && !data.projects.includes(t.project)) data.projects.push(t.project); });
     toast(`Import abgeschlossen: ${data.tasks.length} Aufgabe(n) geladen.`);
   }else{
-    const existingIds=new Set(data.tasks.map(t=>t.id)); let added=0;
-    pendingImport.tasks.forEach(t=>{ let nt={...t}; if(!nt.id||existingIds.has(nt.id)) nt.id=uid(); existingIds.add(nt.id); data.tasks.push(nt); added++; });
+    // Doppelte überspringen: gleiche ID oder inhaltlich gleiche Aufgabe (todo.txt hat keine IDs)
+    const dupKey=t=>[t.name, t.due||'', t.project||'', !!t.done].join('\u0001');
+    const existingIds=new Set(data.tasks.map(t=>t.id));
+    const existingKeys=new Set(data.tasks.map(dupKey)); let added=0, skipped=0;
+    pendingImport.tasks.forEach(t=>{
+      if((t.id && existingIds.has(t.id)) || existingKeys.has(dupKey(t))){ skipped++; return; }
+      const nt={...t}; if(!nt.id) nt.id=uid();
+      existingIds.add(nt.id); existingKeys.add(dupKey(nt)); data.tasks.push(nt); added++;
+    });
     pendingImport.projects.forEach(p=>{ if(!data.projects.includes(p)) data.projects.push(p); });
     pendingImport.tags.forEach(tg=>{ if(!data.tags.includes(tg)) data.tags.push(tg); });
     data.tasks.forEach(t=>{ if(t.project && !data.projects.includes(t.project)) data.projects.push(t.project); });
-    toast(`Import abgeschlossen: ${added} Aufgabe(n) hinzugefügt.`);
+    toast(`Import abgeschlossen: ${added} Aufgabe(n) hinzugefügt`+(skipped?`, ${skipped} doppelte übersprungen.`:'.'));
   }
   pendingImport=null; $('importOverlay').classList.remove('show');
   save(); renderFilters(); render();
@@ -920,6 +1076,207 @@ function restoreFromText(text){
   data.tasks.forEach(t=>{ if(t.project && !data.projects.includes(t.project)) data.projects.push(t.project); });
   save(); renderFilters(); render(); closeBackups();
   toast('Backup wiederhergestellt.');
+}
+
+/* ---------- Nextcloud-Sync (WebDAV) ----------
+   Ablauf: Datei laden (GET) → mit lokalem Stand zusammenführen → nur bei Unterschied hochladen (PUT).
+   Mit If-Match: hat ein anderes Gerät die Datei zwischendurch geändert (412), wird erneut zusammengeführt. */
+const SYNC_DEFAULT_PATH = 'Aufgaben/aufgaben.json';
+const syncState = { running:false, again:false, timer:null, noIfMatch:false };
+
+function getSyncCfg(){ try{ return JSON.parse(localStorage.getItem(LS_SYNC))||null; }catch(e){ return null; } }
+function setSyncCfg(c){ c ? localStorage.setItem(LS_SYNC, JSON.stringify(c)) : localStorage.removeItem(LS_SYNC); }
+function syncConfigured(c=getSyncCfg()){ return !!(c && c.url && c.user && c.pass && c.path); }
+function updateSyncCfg(patch){ const c=getSyncCfg(); if(c) setSyncCfg(Object.assign(c, patch)); }
+
+function davBase(cfg){
+  let base=cfg.url.trim().replace(/\/+$/,'');
+  if(!/^https?:\/\//i.test(base)) base='https://'+base;
+  if(!/\/remote\.php\//.test(base)) base+='/remote.php/dav/files/'+encodeURIComponent(cfg.user);
+  return base;
+}
+function davSegments(path){ return String(path||'').split('/').map(s=>s.trim()).filter(Boolean); }
+function davUrl(cfg, segs){ return davBase(cfg)+'/'+segs.map(encodeURIComponent).join('/'); }
+function b64(s){ return btoa(String.fromCharCode(...new TextEncoder().encode(s))); }
+
+class SyncError extends Error{ constructor(msg, opts={}){ super(msg); Object.assign(this, opts); } }
+async function dav(cfg, method, segs, { body, headers }={}){
+  let resp;
+  try{
+    resp = await fetch(davUrl(cfg, segs), { method, body, cache:'no-store', credentials:'omit',
+      headers:{ 'Authorization':'Basic '+b64(cfg.user+':'+cfg.pass), ...(headers||{}) } });
+  }catch(e){
+    if(navigator.onLine===false) throw new SyncError('Offline – Sync folgt, sobald wieder Netz da ist.', { network:true, offline:true });
+    throw new SyncError(`Nextcloud nicht erreichbar oder Zugriff blockiert (CORS). Ist „WebAppPassword" installiert und ${location.origin} als WebDAV-Origin eingetragen?`, { network:true });
+  }
+  if(resp.status===401) throw new SyncError('Anmeldung fehlgeschlagen – Benutzername oder App-Passwort prüfen.');
+  return resp;
+}
+async function davMkdirs(cfg, segs){
+  for(let i=1; i<segs.length; i++){
+    const r=await dav(cfg, 'MKCOL', segs.slice(0,i));
+    if(!(r.status===201 || r.status===405)) throw new SyncError(`Ordner „${segs.slice(0,i).join('/')}" konnte nicht angelegt werden (${r.status}).`);
+  }
+}
+async function davPut(cfg, segs, text, mime, etag){
+  const send = ifMatch => dav(cfg, 'PUT', segs, { body:text, headers:Object.assign({ 'Content-Type':mime }, ifMatch?{ 'If-Match':etag }:{}) });
+  let useIfMatch = !!etag && !syncState.noIfMatch;
+  let r;
+  try{ r=await send(useIfMatch); }
+  catch(e){
+    // Manche CORS-Konfigurationen erlauben den If-Match-Header nicht → einmalig ohne versuchen
+    if(!(useIfMatch && e.network && !e.offline)) throw e;
+    syncState.noIfMatch=true; useIfMatch=false; r=await send(false);
+  }
+  if(r.status===409 || r.status===404){ await davMkdirs(cfg, segs); r=await send(useIfMatch); }
+  return r;
+}
+
+function parseRemote(text){
+  let p;
+  try{ p=JSON.parse(text); }catch(e){ throw new SyncError('Die Datei in der Nextcloud ist kein gültiges JSON und wird daher nicht überschrieben.'); }
+  const d = p && p.data && Array.isArray(p.data.tasks) ? p.data : p;
+  if(!d || !Array.isArray(d.tasks)) throw new SyncError('Die Datei in der Nextcloud hat ein unbekanntes Format und wird daher nicht überschrieben.');
+  return normalizeData({ tasks:d.tasks, projects:d.projects, tags:d.tags, tombstones:d.tombstones, listLog:d.listLog });
+}
+/* Gleiches Format wie der JSON-Export → die Datei lässt sich auch direkt importieren */
+function syncPayload(){
+  return { app:'Aufgabenverwaltung', version:2, exportedAt:new Date().toISOString(),
+    data:{ tasks:data.tasks, projects:data.projects, tags:data.tags, tombstones:data.tombstones, listLog:data.listLog } };
+}
+function applyMerged(merged){
+  const before=canon(data);
+  Object.assign(data, merged);
+  snapshot=takeSnapshot(data);
+  if(canon(data)===before) return;
+  persist(); autoBackup();
+  activeFilters.projects.forEach(p=>{ if(!data.projects.includes(p)) activeFilters.projects.delete(p); });
+  activeFilters.tags.forEach(t=>{ if(!data.tags.includes(t)) activeFilters.tags.delete(t); });
+  renderFilters(); render();
+  if($('manageOverlay').classList.contains('show')) renderManage();
+}
+
+async function syncNow({ manual=false }={}){
+  const cfg=getSyncCfg(); if(!syncConfigured(cfg)) return;
+  if(syncState.running){ syncState.again=true; return; }
+  syncState.running=true; clearTimeout(syncState.timer); setSyncStatus('busy');
+  try{
+    const segs=davSegments(cfg.path);
+    let done=false;
+    for(let attempt=0; attempt<3 && !done; attempt++){
+      const r=await dav(cfg, 'GET', segs);
+      let remote=null, etag=null;
+      if(r.status===200){
+        etag=r.headers.get('ETag')||r.headers.get('OC-ETag');
+        const text=await r.text();
+        if(text.trim()) remote=parseRemote(text);
+      }else if(r.status!==404){
+        throw new SyncError(`Laden aus der Nextcloud fehlgeschlagen (Fehler ${r.status}).`);
+      }
+      applyMerged(mergeData(data, remote||{ tasks:[], projects:[], tags:[] }));
+      if(remote && canon(remote)===canon(data)){ done=true; break; }   // Server ist bereits aktuell
+      const put=await davPut(cfg, segs, JSON.stringify(syncPayload()), 'application/json', etag);
+      if(put.status===412) continue;   // zwischenzeitlich geändert → neu laden & zusammenführen
+      if(!put.ok) throw new SyncError(`Speichern in der Nextcloud fehlgeschlagen (Fehler ${put.status}).`);
+      done=true;
+    }
+    if(!done) throw new SyncError('Die Datei wird gerade ständig geändert – bitte gleich noch einmal versuchen.');
+    if(cfg.todoTxt){
+      const txt=buildTodoTxt();
+      if(txt!==cfg.lastTodoTxt){
+        const r=await davPut(cfg, [...segs.slice(0,-1), 'todo.txt'], txt, 'text/plain; charset=utf-8', null);
+        if(!r.ok) throw new SyncError(`todo.txt konnte nicht gespeichert werden (Fehler ${r.status}).`);
+        updateSyncCfg({ lastTodoTxt:txt });
+      }
+    }
+    updateSyncCfg({ lastSync:Date.now(), lastError:null });
+    setSyncStatus('ok');
+    if(manual) toast('Mit Nextcloud synchronisiert ✔');
+  }catch(e){
+    const msg=e instanceof SyncError ? e.message : 'Sync fehlgeschlagen: '+e.message;
+    if(!e.offline) updateSyncCfg({ lastError:msg });
+    setSyncStatus(e.offline?'off':'err', msg);
+    if(manual) toast(msg);
+  }finally{
+    syncState.running=false;
+    if(syncState.again){ syncState.again=false; scheduleSync(500); }
+    if($('syncOverlay').classList.contains('show')) renderSyncInfo();
+  }
+}
+function scheduleSync(delay=2500){
+  const cfg=getSyncCfg();
+  if(!syncConfigured(cfg) || cfg.auto===false) return;
+  clearTimeout(syncState.timer);
+  syncState.timer=setTimeout(()=>syncNow(), delay);
+}
+function fmtTime(ts){ return new Date(ts).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}); }
+function setSyncStatus(state, msg){
+  const el=$('syncStatus'); const cfg=getSyncCfg();
+  if(!syncConfigured(cfg)){ el.style.display='none'; return; }
+  el.style.display='';
+  el.className='sync-pill '+state;
+  const labels={ busy:'⟳ Sync …', ok:'☁️ '+(cfg.lastSync?fmtTime(cfg.lastSync):'bereit'), err:'⚠️ Fehler', off:'☁️ offline' };
+  el.textContent=labels[state]||labels.ok;
+  el.title=msg || (cfg.lastSync ? 'Zuletzt synchronisiert: '+new Date(cfg.lastSync).toLocaleString('de-DE')+' – tippen zum Synchronisieren' : 'Tippen zum Synchronisieren');
+}
+
+/* ---------- Sync-Dialog ---------- */
+function openSync(){
+  const cfg=getSyncCfg()||{};
+  $('syncUrl').value=cfg.url||''; $('syncUser').value=cfg.user||''; $('syncPass').value=cfg.pass||'';
+  $('syncPath').value=cfg.path||SYNC_DEFAULT_PATH;
+  $('syncAuto').checked=cfg.auto!==false; $('syncTodoTxt').checked=!!cfg.todoTxt;
+  $('syncOrigin').textContent=location.origin;
+  $('syncDisconnect').style.display=syncConfigured(cfg)?'':'none';
+  renderSyncInfo();
+  $('syncOverlay').classList.add('show');
+}
+function closeSync(){ $('syncOverlay').classList.remove('show'); }
+function renderSyncInfo(msg){
+  const cfg=getSyncCfg(); const el=$('syncInfo');
+  if(msg){ el.innerHTML=msg; return; }
+  if(!syncConfigured(cfg)){ el.textContent='Noch nicht eingerichtet. Die Aufgaben liegen nur auf diesem Gerät.'; return; }
+  let html=cfg.lastSync ? `Zuletzt synchronisiert: <b>${new Date(cfg.lastSync).toLocaleString('de-DE')}</b>` : 'Noch nicht synchronisiert.';
+  if(cfg.lastError) html+=`<br><span style="color:#ff9aa4">⚠️ ${escapeHtml(cfg.lastError)}</span>`;
+  el.innerHTML=html;
+}
+function readSyncForm(){
+  const prev=getSyncCfg()||{};
+  const cfg=Object.assign({}, prev, {
+    url:$('syncUrl').value.trim(), user:$('syncUser').value.trim(), pass:$('syncPass').value,
+    path:davSegments($('syncPath').value.trim()||SYNC_DEFAULT_PATH).join('/'),
+    auto:$('syncAuto').checked, todoTxt:$('syncTodoTxt').checked });
+  if(cfg.path!==prev.path || cfg.url!==prev.url || cfg.user!==prev.user) delete cfg.lastTodoTxt;
+  if(!cfg.url || !cfg.user || !cfg.pass){ renderSyncInfo('<span style="color:#ff9aa4">Bitte Adresse, Benutzername und App-Passwort angeben.</span>'); return null; }
+  if(location.protocol==='https:' && /^http:\/\//i.test(cfg.url)){
+    renderSyncInfo('<span style="color:#ff9aa4">Unverschlüsselte http://-Adressen blockiert der Browser auf dieser HTTPS-Seite. Bitte https:// verwenden.</span>'); return null;
+  }
+  return cfg;
+}
+async function testSync(){
+  const cfg=readSyncForm(); if(!cfg) return;
+  renderSyncInfo('⟳ Teste Verbindung …');
+  try{
+    const r=await dav(cfg, 'GET', davSegments(cfg.path));
+    if(r.status===200){
+      const text=await r.text(); const remote=text.trim()?parseRemote(text):{ tasks:[] };
+      renderSyncInfo(`<span style="color:#8ee6b4">✔ Verbindung ok – Datei gefunden (${remote.tasks.length} Aufgabe(n)).</span>`);
+    }else if(r.status===404){
+      renderSyncInfo('<span style="color:#8ee6b4">✔ Verbindung ok – die Datei wird beim ersten Sync angelegt.</span>');
+    }else{
+      renderSyncInfo(`<span style="color:#ff9aa4">⚠️ Server antwortet mit Fehler ${r.status}. Adresse prüfen.</span>`);
+    }
+  }catch(e){ renderSyncInfo(`<span style="color:#ff9aa4">⚠️ ${escapeHtml(e.message)}</span>`); }
+}
+function saveSync(){
+  const cfg=readSyncForm(); if(!cfg) return;
+  cfg.lastError=null; setSyncCfg(cfg);
+  closeSync(); setSyncStatus('ok'); syncNow({ manual:true });
+}
+function disconnectSync(){
+  if(!confirm('Nextcloud-Sync auf diesem Gerät trennen? Die Aufgaben bleiben lokal erhalten, die Datei in der Nextcloud bleibt unberührt.')) return;
+  clearTimeout(syncState.timer); setSyncCfg(null); setSyncStatus(); closeSync();
+  toast('Sync getrennt.');
 }
 
 /* ---------- Toast ---------- */
@@ -977,10 +1334,18 @@ $('newProj').addEventListener('keydown',e=>{ if(e.key==='Enter') $('addProj').cl
 $('newTag').addEventListener('keydown',e=>{ if(e.key==='Enter') $('addTag').click(); });
 $('fName').addEventListener('keydown',e=>{ if(e.key==='Enter') saveTask(); });
 
-[ 'taskOverlay','settingsOverlay','manageOverlay','importOverlay','backupOverlay' ].forEach(id=>{
+$('syncSetupBtn').onclick = ()=>{ closeSettings(); openSync(); };
+$('syncSave').onclick = saveSync;
+$('syncTest').onclick = testSync;
+$('syncDisconnect').onclick = disconnectSync;
+$('syncStatus').onclick = ()=>syncNow({ manual:true });
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') scheduleSync(300); });
+window.addEventListener('online', ()=>scheduleSync(300));
+
+[ 'taskOverlay','settingsOverlay','manageOverlay','importOverlay','backupOverlay','syncOverlay' ].forEach(id=>{
   $(id).addEventListener('click',e=>{ if(e.target.id===id){ $(id).classList.remove('show'); } });
 });
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeTask(); closeSettings(); closeManage(); $('importOverlay').classList.remove('show'); closeBackups(); } });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeTask(); closeSettings(); closeManage(); $('importOverlay').classList.remove('show'); closeBackups(); closeSync(); } });
 
 function switchView(v){ view=v; $('tabActive').classList.toggle('active',v==='active'); $('tabArchive').classList.toggle('active',v==='archive'); render(); }
 
@@ -999,6 +1364,9 @@ render();
 autoBackup();
 setInterval(autoBackup, 5*60*1000);
 scheduleAutoDownload();
+setSyncStatus('ok');
+scheduleSync(500);
+setInterval(()=>{ if(document.visibilityState==='visible') scheduleSync(0); }, 5*60*1000);
 </script>
 </body>
 </html>

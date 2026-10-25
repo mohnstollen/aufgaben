@@ -31,7 +31,7 @@
     min-height:100vh; -webkit-tap-highlight-color:transparent;
   }
   header{
-    padding:calc(18px + env(safe-area-inset-top)) 26px 14px; position:sticky; top:0; z-index:20;
+    padding:calc(18px + var(--safe-area-inset-top, env(safe-area-inset-top))) 26px 14px; position:sticky; top:0; z-index:20;
     background:rgba(15,20,32,.85); backdrop-filter:blur(10px);
     border-bottom:1px solid var(--border);
   }
@@ -109,14 +109,14 @@
   .empty{text-align:center; color:var(--muted); padding:60px 20px; font-size:14px}
 
   .fab{
-    position:fixed; right:26px; bottom:calc(26px + env(safe-area-inset-bottom)); width:60px; height:60px; border-radius:50%;
+    position:fixed; right:26px; bottom:calc(26px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom))); width:60px; height:60px; border-radius:50%;
     background:var(--accent); border:none; color:#fff; font-size:32px; cursor:pointer;
     box-shadow:var(--shadow); z-index:30; display:grid; place-items:center; transition:.15s;
   }
   .fab:hover{background:var(--accent-hover); transform:scale(1.06)}
 
   .toast{
-    position:fixed; bottom:calc(26px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%) translateY(80px);
+    position:fixed; bottom:calc(26px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom))); left:50%; transform:translateX(-50%) translateY(80px);
     background:var(--surface2); border:1px solid var(--border); color:var(--text);
     padding:12px 20px; border-radius:12px; box-shadow:var(--shadow); z-index:60;
     font-size:14px; opacity:0; transition:.25s; pointer-events:none; max-width:90vw; text-align:center;
@@ -201,6 +201,7 @@
   .sync-pill.busy{color:#9dc0ff}
   .sync-pill.err{color:#ff9aa4; border-color:rgba(255,92,108,.5)}
   .sync-pill.off{color:#ffd27a}
+  .native .web-only{display:none}
   .modal code{background:var(--surface2); padding:1px 6px; border-radius:5px; color:#c3b8ff}
 </style>
 </head>
@@ -394,7 +395,7 @@
 
     <div class="field">
       <div class="switch-row">
-        <span class="lbl">Tägliches Backup automatisch in den Download-Ordner</span>
+        <span class="lbl" id="autoDlLabel">Tägliches Backup automatisch in den Download-Ordner</span>
         <label class="switch">
           <input type="checkbox" id="autoDlToggle">
           <span class="slider"></span>
@@ -410,8 +411,10 @@
         </select>
       </div>
       <div class="hint" style="margin-top:8px">
-        Beim ersten Öffnen pro Tag wird eine <code>todo_JJJJ-MM-TT.txt</code> in die Downloads geladen.
-        Interne Snapshots älter als die Aufbewahrung werden automatisch gelöscht.
+        <span class="web-only">Beim ersten Öffnen pro Tag wird eine <code>todo_JJJJ-MM-TT.txt</code> in die Downloads geladen.
+        Interne Snapshots älter als die Aufbewahrung werden automatisch gelöscht.</span>
+        <span class="native-only" style="display:none">Beim ersten Öffnen pro Tag wird eine <code>todo_JJJJ-MM-TT.txt</code> unter <b>Dokumente/Aufgaben</b> abgelegt.
+        Ältere Dateien und Snapshots werden nach Ablauf der Aufbewahrung automatisch gelöscht.</span>
       </div>
     </div>
 
@@ -482,8 +485,8 @@
       <summary style="cursor:pointer">Einrichtung in der Nextcloud (einmalig)</summary>
       <ol style="padding-left:18px; line-height:1.55">
         <li><b>App-Passwort</b> anlegen: Persönliche Einstellungen → Sicherheit → „Neues App-Passwort erstellen". Nicht das normale Passwort verwenden.</li>
-        <li>Als Admin die Nextcloud-App <b>„WebAppPassword"</b> installieren. Nextcloud erlaubt WebDAV-Zugriffe von anderen Webseiten sonst nicht (CORS).</li>
-        <li>In den Einstellungen von WebAppPassword unter den erlaubten WebDAV-Origins eintragen: <code id="syncOrigin"></code></li>
+        <li class="web-only">Als Admin die Nextcloud-App <b>„WebAppPassword"</b> installieren. Nextcloud erlaubt WebDAV-Zugriffe von anderen Webseiten sonst nicht (CORS).</li>
+        <li class="web-only">In den Einstellungen von WebAppPassword unter den erlaubten WebDAV-Origins eintragen: <code id="syncOrigin"></code></li>
       </ol>
       Die Zugangsdaten werden nur auf diesem Gerät gespeichert (im Local Storage des Browsers).
     </details>
@@ -504,6 +507,10 @@ const LS_AUTODL = 'taskmanager_autodl';
 const LS_RETENTION = 'taskmanager_retention';
 const LS_DL_REGISTRY = 'taskmanager_dl_registry';
 const LS_SYNC = 'taskmanager_sync';
+/* Läuft die App als Android-App (Capacitor)? Dann stehen native Plugins bereit. */
+const IS_NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+const Native = IS_NATIVE ? window.Capacitor.Plugins : {};
+if(IS_NATIVE) document.documentElement.classList.add('native');
 const TOMBSTONE_DAYS = 180;
 /* tombstones: { taskId: gelöschtAm }, listLog: { 'p:Name'|'t:Name': {ts, del} } – nötig für den Sync */
 const defaultData = { tasks:[], projects:['Allgemein'], tags:['wichtig'], tombstones:{}, listLog:{} };
@@ -703,6 +710,7 @@ function pruneByRetention(hist){
 function getRegistry(){ try{ return JSON.parse(localStorage.getItem(LS_DL_REGISTRY))||[]; }catch(e){ return []; } }
 function setRegistry(r){ localStorage.setItem(LS_DL_REGISTRY, JSON.stringify(r)); }
 function recordDownload(filename){
+  if(IS_NATIVE) return;
   const reg=getRegistry(); const date=toDateStr(Date.now());
   if(!reg.some(x=>x.filename===filename)) reg.push({ date, filename, ts:Date.now() });
   setRegistry(reg.slice(-400));
@@ -721,6 +729,7 @@ function scheduleAutoDownload(){
   const today = toDateStr(Date.now());
   if(cfg.lastDate === today) return;
   if(!data.tasks.length) return;
+  if(IS_NATIVE){ nativeDailyBackup(today); return; }
   const doit = ()=>{
     const c = getAutoDl();
     if(c.lastDate === today){ cleanup(); return; }
@@ -737,11 +746,46 @@ function scheduleAutoDownload(){
 
 /* ---------- Download helper ---------- */
 function downloadText(text, filename, mime){
+  if(IS_NATIVE){ nativeShareText(text, filename); return; }
   const blob = new Blob([text], { type: mime||'text/plain' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href=url; a.download=filename;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(url), 1500);
+}
+
+/* ---------- Dateien in der Android-App ----------
+   Die WebView kann keine Browser-Downloads: Exporte gehen über das Teilen-Menü,
+   das tägliche Backup landet unter Dokumente/Aufgaben. */
+const NATIVE_BACKUP_DIR = 'Aufgaben';
+async function nativeShareText(text, filename){
+  try{
+    const { uri } = await Native.Filesystem.writeFile({ path:filename, data:text, directory:'CACHE', encoding:'utf8' });
+    await Native.Share.share({ title:filename, dialogTitle:'Datei speichern oder teilen', files:[uri] });
+  }catch(e){
+    if(!/cancel/i.test(e.message||'')) toast('Teilen fehlgeschlagen: '+(e.message||e));
+  }
+}
+async function nativeDailyBackup(today){
+  const fn=`todo_${today}.txt`;
+  try{
+    await Native.Filesystem.writeFile({ path:`${NATIVE_BACKUP_DIR}/${fn}`, data:buildTodoTxt(), directory:'DOCUMENTS', encoding:'utf8', recursive:true });
+    const c=getAutoDl(); c.lastDate=today; setAutoDl(c);
+    const removed=await nativeCleanupBackups();
+    toast('Tages-Backup unter Dokumente/Aufgaben gespeichert 📄'+(removed?` · ${removed} alte entfernt`:''));
+  }catch(e){ toast('Tages-Backup fehlgeschlagen: '+(e.message||e)); }
+}
+async function nativeCleanupBackups(){
+  const keepDays=getRetention(); const today=new Date(); today.setHours(0,0,0,0); let removed=0;
+  try{
+    const { files } = await Native.Filesystem.readdir({ path:NATIVE_BACKUP_DIR, directory:'DOCUMENTS' });
+    for(const f of files){
+      const name=typeof f==='string'?f:f.name; const m=/^todo_(\d{4}-\d{2}-\d{2})\.txt$/.exec(name);
+      if(!m || daysBetween(today, new Date(m[1]+'T00:00:00')) < keepDays) continue;
+      try{ await Native.Filesystem.deleteFile({ path:`${NATIVE_BACKUP_DIR}/${name}`, directory:'DOCUMENTS' }); removed++; }catch(_){ /* z. B. nach Neuinstallation nicht mehr unsere Datei */ }
+    }
+  }catch(_){}
+  return removed;
 }
 
 /* ---------- Rendering ---------- */
@@ -1056,6 +1100,7 @@ function renderBackups(){
   });
 }
 function renderCleanup(){
+  if(IS_NATIVE){ $('cleanupGroup').style.display='none'; return; }
   const grp=$('cleanupGroup'); const list=$('cleanupList');
   const stale=staleDownloads();
   if(!stale.length){ grp.style.display='none'; list.innerHTML=''; return; }
@@ -1100,13 +1145,18 @@ function davUrl(cfg, segs){ return davBase(cfg)+'/'+segs.map(encodeURIComponent)
 function b64(s){ return btoa(String.fromCharCode(...new TextEncoder().encode(s))); }
 
 class SyncError extends Error{ constructor(msg, opts={}){ super(msg); Object.assign(this, opts); } }
+async function nativeFetch(url, { method, body, headers }){
+  const r = await Native.WebDav.request({ url, method, body, headers });
+  return { status:r.status, ok:r.status>=200 && r.status<300, headers:{ get:k=>r.headers[k.toLowerCase()]||null }, text:async()=>r.body };
+}
 async function dav(cfg, method, segs, { body, headers }={}){
   let resp;
   try{
-    resp = await fetch(davUrl(cfg, segs), { method, body, cache:'no-store', credentials:'omit',
+    resp = await (IS_NATIVE ? nativeFetch : fetch)(davUrl(cfg, segs), { method, body, cache:'no-store', credentials:'omit',
       headers:{ 'Authorization':'Basic '+b64(cfg.user+':'+cfg.pass), ...(headers||{}) } });
   }catch(e){
     if(navigator.onLine===false) throw new SyncError('Offline – Sync folgt, sobald wieder Netz da ist.', { network:true, offline:true });
+    if(IS_NATIVE) throw new SyncError('Nextcloud nicht erreichbar: '+(e.message||e), { network:true });
     throw new SyncError(`Nextcloud nicht erreichbar oder Zugriff blockiert (CORS). Ist „WebAppPassword" installiert und ${location.origin} als WebDAV-Origin eingetragen?`, { network:true });
   }
   if(resp.status===401) throw new SyncError('Anmeldung fehlgeschlagen – Benutzername oder App-Passwort prüfen.');
@@ -1248,7 +1298,7 @@ function readSyncForm(){
     auto:$('syncAuto').checked, todoTxt:$('syncTodoTxt').checked });
   if(cfg.path!==prev.path || cfg.url!==prev.url || cfg.user!==prev.user) delete cfg.lastTodoTxt;
   if(!cfg.url || !cfg.user || !cfg.pass){ renderSyncInfo('<span style="color:#ff9aa4">Bitte Adresse, Benutzername und App-Passwort angeben.</span>'); return null; }
-  if(location.protocol==='https:' && /^http:\/\//i.test(cfg.url)){
+  if(!IS_NATIVE && location.protocol==='https:' && /^http:\/\//i.test(cfg.url)){
     renderSyncInfo('<span style="color:#ff9aa4">Unverschlüsselte http://-Adressen blockiert der Browser auf dieser HTTPS-Seite. Bitte https:// verwenden.</span>'); return null;
   }
   return cfg;
@@ -1349,8 +1399,21 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeTask(); clos
 
 function switchView(v){ view=v; $('tabActive').classList.toggle('active',v==='active'); $('tabArchive').classList.toggle('active',v==='archive'); render(); }
 
+/* ---------- Android-App ---------- */
+const OVERLAYS = [ 'importOverlay','syncOverlay','manageOverlay','backupOverlay','taskOverlay','settingsOverlay' ];
+if(IS_NATIVE){
+  document.querySelectorAll('.native-only').forEach(el=>el.style.display='');
+  $('autoDlLabel').textContent='Tägliches Backup automatisch unter Dokumente/Aufgaben';
+  // Zurück-Taste schließt zuerst offene Dialoge, sonst App in den Hintergrund
+  Native.App.addListener('backButton', ()=>{
+    const open=OVERLAYS.find(id=>$(id).classList.contains('show'));
+    if(open) $(open).classList.remove('show'); else Native.App.minimizeApp();
+  });
+  Native.App.addListener('appStateChange', ({ isActive })=>{ if(isActive){ scheduleSync(300); scheduleAutoDownload(); } });
+}
+
 /* ---------- PWA ---------- */
-if('serviceWorker' in navigator){
+if(!IS_NATIVE && 'serviceWorker' in navigator){
   window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(err=>console.warn('SW-Registrierung fehlgeschlagen:',err)); });
 }
 let deferredPrompt=null;

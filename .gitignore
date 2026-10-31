@@ -16,3 +16,7 @@ www/
 *.keystore
 *.jks
 *.jks.b64
+
+# Playwright-Tests
+test-results/
+playwright-report/

@@ -147,6 +147,23 @@ Nach Änderungen an `index.html` immer erst `npm run sync` ausführen.
 > `mohnstollen.github.io`. Hier unter `/aufgaben/` findet Android sie nicht, deshalb zeigt
 > die TWA eine Adressleiste.
 
+## 🧪 Automatische Tests
+Der Ordner `tests/` enthält Playwright-Tests für die wichtigsten Abläufe:
+- **Sync** gegen einen Nachbau der Nextcloud-WebDAV-Schnittstelle (`tests/helpers/mock-webdav.mjs`):
+  zwei Geräte, Löschen, Konflikte (412), komprimierte/fehlende ETags, gesperrte Dateien (423)
+- **Android-App** mit nachgebildeten Capacitor-Plugins: natives WebDAV, Zurück-Taste,
+  Backups, Teilen, Update-Prüfung
+- **Bedienung**: Gruppierung, Schnelleingabe, Bearbeiten, Rückgängig, Wischen, Filter, Design
+
+In GitHub Actions laufen sie bei jedem Pull Request und vor jedem APK-Build und Pages-Deploy
+(`.github/workflows/tests.yml`). **Schlägt ein Test fehl, gibt es weder ein Release noch ein
+Web-Update.** Lokal:
+```bash
+npm ci
+npx playwright install chromium   # einmalig
+npm test
+```
+
 ## 🔁 Änderungen / Updates ausrollen
 Nach Änderungen einfach neu pushen:
 ```bash
@@ -220,6 +237,7 @@ aufgaben/
 ├─ package.json             # Capacitor-Abhängigkeiten & Build-Skripte
 ├─ capacitor.config.json    # Konfiguration der Android-App
 ├─ scripts/build-web.mjs    # kopiert die Web-App nach www/
+├─ tests/                   # Playwright-Tests (npm test)
 ├─ android/                 # natives Android-Projekt (inkl. WebDAV-Plugin)
 ├─ .gitignore
 ├─ README.md
@@ -230,6 +248,7 @@ aufgaben/
 │  ├─ apple-touch-icon.png
 │  └─ favicon.png
 └─ .github/workflows/
+   ├─ tests.yml             # Tests (vor Deploy und APK-Build)
    ├─ deploy.yml            # Auto-Deploy auf GitHub Pages
    └─ android.yml           # baut die APK
 ```

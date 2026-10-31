@@ -16,6 +16,8 @@ on:
       - "icons/**"
       - "android/**"
       - "scripts/**"
+      - "tests/**"
+      - "playwright.config.mjs"
       - "package.json"
       - "package-lock.json"
       - "capacitor.config.json"
@@ -31,7 +33,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  test:
+    uses: ./.github/workflows/tests.yml
+
   apk:
+    needs: test
     runs-on: ubuntu-latest
     env:
       HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}

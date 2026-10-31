@@ -14,6 +14,9 @@ Gerät (Local Storage) – kein Konto, kein Tracking. Optional lassen sie sich �
 - Antippen öffnet eine Aufgabe zum Bearbeiten
 - Auf dem Handy **wischen**: nach rechts = erledigt, nach links = löschen
 - Löschen und Abhaken lassen sich per **„Rückgängig“** zurücknehmen
+- **Wiederkehrende Aufgaben** (täglich, wöchentlich, monatlich …): beim Abhaken entsteht die nächste
+- **Verschieben**: Fälligkeitsdatum antippen → Heute, Morgen, Nächsten Montag, In 1 Woche, Datum wählen;
+  bei überfälligen Aufgaben „Alle auf heute“
 - Tags und Projekte bearbeiten/löschen
 - **Helles und dunkles Design** (automatisch nach Systemeinstellung oder fest wählbar)
 - Zurück-Taste schließt offene Dialoge
@@ -169,7 +172,7 @@ Nach Änderungen einfach neu pushen:
 ```bash
 git add -A && git commit -m "Update" && git push
 ```
-Die Service-Worker-Cache-Version steht in `sw.js` (`const CACHE = 'aufgaben-v13'`).
+Die Service-Worker-Cache-Version steht in `sw.js` (`const CACHE = 'aufgaben-v14'`).
 Bei größeren Änderungen die Zahl erhöhen (z. B. `aufgaben-v2`), damit Clients frisch laden.
 
 ## ⌨️ Schnelleingabe
@@ -185,6 +188,8 @@ Beim Anlegen einfach alles in eine Zeile schreiben, z. B.
 | `montag` … `sonntag` | nächster dieser Wochentag |
 | `+3t` / `+3d`, `+2w`, `+1m` | in 3 Tagen, 2 Wochen, 1 Monat |
 | `24.12.`, `24.12.27`, `2026-12-24` | festes Datum (ohne Jahr: nächstes Vorkommen) |
+| `täglich`, `wöchentlich`, `zweiwöchentlich`, `monatlich`, `jährlich` | wiederholt sich im festen Rhythmus |
+| `rec:+2w` / `rec:2w` | alle 2 Wochen ab Fälligkeit / ab Erledigung (wie todo.txt) |
 
 Nur das erste Datum wird erkannt; alles Übrige wird zum Namen.
 

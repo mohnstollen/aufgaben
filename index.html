@@ -406,6 +406,14 @@
       <button class="btn ghost block" id="backupsBtn">🗄️ Backups verwalten</button>
     </div>
 
+    <div class="set-group native-only" style="display:none">
+      <h3>App</h3>
+      <div class="inline-select" style="margin-top:0">
+        <span class="lbl" style="font-size:14px">Version <b id="appVer">–</b></span>
+        <button class="btn ghost" id="updateBtn" style="padding:8px 12px">Nach Updates suchen</button>
+      </div>
+    </div>
+
     <div class="set-group" id="installGroup" style="display:none">
       <h3>App</h3>
       <button class="btn ghost block" id="installBtn">📲 App installieren</button>
@@ -1581,6 +1589,51 @@ function disconnectSync(){
   toast('Sync getrennt.');
 }
 
+/* ---------- App-Updates (nur Android-App) ----------
+   Fragt GitHub nach dem neuesten Release; die APK lädt dann der Browser herunter und
+   lässt sich direkt über die installierte App installieren (gleicher Signierschlüssel). */
+const UPDATE_REPO = 'mohnstollen/aufgaben';
+const LS_UPDATE = 'taskmanager_update';
+let appVersion = '';
+function getUpd(){ try{ return JSON.parse(localStorage.getItem(LS_UPDATE))||{}; }catch(e){ return {}; } }
+function setUpd(o){ try{ localStorage.setItem(LS_UPDATE, JSON.stringify(o)); }catch(e){} }
+function versionNewer(a,b){
+  const p=v=>String(v).replace(/^v/,'').split(/[.-]/).slice(0,3).map(x=>parseInt(x,10)||0);
+  const x=p(a), y=p(b);
+  for(let i=0;i<3;i++) if(x[i]!==y[i]) return x[i]>y[i];
+  return false;
+}
+function availableUpdate(){ const a=getUpd().available; return a && appVersion && versionNewer(a.tag, appVersion) ? a : null; }
+function renderUpdate(){
+  const a=availableUpdate(), btn=$('updateBtn');
+  $('appVer').textContent=appVersion||'–';
+  btn.textContent = a ? `Version ${a.tag.replace(/^v/,'')} laden` : 'Nach Updates suchen';
+  btn.classList.toggle('primary', !!a); btn.classList.toggle('ghost', !a);
+}
+function downloadUpdate(){ const a=availableUpdate(); if(a) location.href=a.url; }   // öffnet den Browser-Download
+async function checkUpdate(manual=false){
+  if(!IS_NATIVE || !appVersion) return;
+  const st=getUpd();
+  if(!manual && Date.now()-(st.checkedAt||0) < 6*3600000) return;              // automatisch höchstens alle 6 h
+  if(manual) $('updateBtn').textContent='Suche …';
+  try{
+    const r=await fetch(`https://api.github.com/repos/${UPDATE_REPO}/releases/latest`, { headers:{ Accept:'application/vnd.github+json' }, cache:'no-store' });
+    if(!r.ok) throw new Error('GitHub antwortet mit Fehler '+r.status);
+    const rel=await r.json();
+    const apk=(rel.assets||[]).find(x=>/\.apk$/i.test(x.name));
+    st.checkedAt=Date.now();
+    st.available = apk && versionNewer(rel.tag_name, appVersion) ? { tag:rel.tag_name, url:apk.browser_download_url } : null;
+    setUpd(st); renderUpdate();
+    if(st.available && (manual || st.notified!==st.available.tag)){
+      st.notified=st.available.tag; setUpd(st);
+      toast(`Version ${st.available.tag.replace(/^v/,'')} ist verfügbar`, { onAction:downloadUpdate, actionLabel:'Laden' });
+    }else if(manual && !st.available) toast(`Du hast die neueste Version (${appVersion}).`);
+  }catch(e){
+    renderUpdate();
+    if(manual) toast('Update-Prüfung fehlgeschlagen: '+(e.message||e));
+  }
+}
+
 /* ---------- Toast ---------- */
 let toastTimer;
 function hideToast(){ $('toast').classList.remove('show'); }
@@ -1588,7 +1641,7 @@ function hideToast(){ $('toast').classList.remove('show'); }
 function toast(msg, { onAction, actionLabel='Rückgängig' }={}){
   const el=$('toast'), btn=$('toastAction');
   $('toastMsg').textContent=msg;
-  btn.hidden=!onAction; btn.textContent=actionLabel;
+  btn.hidden=!onAction; btn.textContent=onAction ? actionLabel : '';
   btn.onclick = onAction ? ()=>{ hideToast(); onAction(); } : null;
   el.classList.toggle('has-action', !!onAction);
   el.classList.add('show');
@@ -1692,7 +1745,9 @@ if(IS_NATIVE){
     const open=OVERLAYS.find(id=>$(id).classList.contains('show'));
     if(open) $(open).classList.remove('show'); else Native.App.minimizeApp();
   });
-  Native.App.addListener('appStateChange', ({ isActive })=>{ if(isActive){ scheduleSync(300); scheduleAutoDownload(); } });
+  Native.App.addListener('appStateChange', ({ isActive })=>{ if(isActive){ scheduleSync(300); scheduleAutoDownload(); checkUpdate(); } });
+  $('updateBtn').onclick = ()=>{ availableUpdate() ? downloadUpdate() : checkUpdate(true); };
+  Native.App.getInfo().then(info=>{ appVersion=info.version||''; renderUpdate(); setTimeout(()=>checkUpdate(), 3000); }).catch(()=>{});
 }
 
 /* ---------- Zurück-Taste in Browser/PWA ----------

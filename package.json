@@ -1,6 +1,6 @@
 {
   "name": "aufgaben",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Aufgabenverwaltung – PWA und Android-App (Capacitor)",
   "license": "GPL-2.0",

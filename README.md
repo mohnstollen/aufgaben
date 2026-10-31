@@ -139,7 +139,7 @@ Nach Änderungen einfach neu pushen:
 ```bash
 git add -A && git commit -m "Update" && git push
 ```
-Die Service-Worker-Cache-Version steht in `sw.js` (`const CACHE = 'aufgaben-v9'`).
+Die Service-Worker-Cache-Version steht in `sw.js` (`const CACHE = 'aufgaben-v10'`).
 Bei größeren Änderungen die Zahl erhöhen (z. B. `aufgaben-v2`), damit Clients frisch laden.
 
 ## ☁️ Synchronisation mit Nextcloud

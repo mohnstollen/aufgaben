@@ -1182,6 +1182,14 @@ async function davPut(cfg, segs, text, mime, etag){
   return r;
 }
 
+/* Nextclouds OC-ETag bleibt unverändert; den normalen ETag schreiben Proxys beim Komprimieren
+   gern um (nginx: W/"…", Apache: "…-gzip") – damit würde jedes If-Match mit 412 scheitern. */
+function syncEtag(headers){
+  const raw=headers.get('OC-ETag')||headers.get('ETag');
+  if(!raw) return null;
+  let e=raw.trim().replace(/^W\//,'').replace(/^"|"$/g,'').replace(/[-;](gzip|br|deflate|zstd)$/i,'');
+  return e ? '"'+e+'"' : null;
+}
 function parseRemote(text){
   let p;
   try{ p=JSON.parse(text); }catch(e){ throw new SyncError('Die Datei in der Nextcloud ist kein gültiges JSON und wird daher nicht überschrieben.'); }
@@ -1213,11 +1221,13 @@ async function syncNow({ manual=false }={}){
   try{
     const segs=davSegments(cfg.path);
     let done=false;
+    let conflicts=0;
     for(let attempt=0; attempt<3 && !done; attempt++){
-      const r=await dav(cfg, 'GET', segs);
+      // In der App unkomprimiert laden, damit kein Proxy den ETag verändert
+      const r=await dav(cfg, 'GET', segs, IS_NATIVE ? { headers:{ 'Accept-Encoding':'identity' } } : {});
       let remote=null, etag=null;
       if(r.status===200){
-        etag=r.headers.get('ETag')||r.headers.get('OC-ETag');
+        etag=syncEtag(r.headers);
         const text=await r.text();
         if(text.trim()) remote=parseRemote(text);
       }else if(r.status!==404){
@@ -1226,7 +1236,12 @@ async function syncNow({ manual=false }={}){
       applyMerged(mergeData(data, remote||{ tasks:[], projects:[], tags:[] }));
       if(remote && canon(remote)===canon(data)){ done=true; break; }   // Server ist bereits aktuell
       const put=await davPut(cfg, segs, JSON.stringify(syncPayload()), 'application/json', etag);
-      if(put.status===412) continue;   // zwischenzeitlich geändert → neu laden & zusammenführen
+      if(put.status===412){
+        // zwischenzeitlich geändert → neu laden & zusammenführen. Scheitert es zweimal in Folge,
+        // passt der ETag des Servers nicht zu If-Match → für diese Sitzung ohne If-Match weiter.
+        if(++conflicts>=2 && !syncState.noIfMatch){ syncState.noIfMatch=true; console.warn('If-Match wird vom Server nicht akzeptiert – Sync ohne Konfliktschutz.'); }
+        continue;
+      }
       if(!put.ok) throw new SyncError(`Speichern in der Nextcloud fehlgeschlagen (Fehler ${put.status}).`);
       done=true;
     }

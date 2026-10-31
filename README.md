@@ -99,25 +99,26 @@ Android installiert ein Update nur, wenn es mit **demselben Schlüssel** signier
 hinterlegten Schlüssel baut der Workflow eine Debug-APK mit wechselndem Schlüssel. Dann
 muss die App für jedes Update deinstalliert werden, und dabei gehen die lokalen Daten verloren.
 
-1. Schlüssel lokal erzeugen (Java muss installiert sein) und **sicher aufbewahren**:
+**Am einfachsten komplett im Browser (GitHub Codespace):**
+1. Im Repo auf **Code → Codespaces → „Create codespace on main“** klicken.
+2. Im Terminal unten ausführen:
    ```bash
-   keytool -genkeypair -v -keystore aufgaben-release.jks -alias aufgaben \
-     -keyalg RSA -keysize 4096 -validity 10000
-   base64 -w0 aufgaben-release.jks > aufgaben-release.jks.b64   # macOS: base64 -i aufgaben-release.jks
+   bash scripts/make-keystore.sh
    ```
-2. Im Repo unter **Settings → Secrets and variables → Actions → New repository secret**
-   anlegen:
+   Zweimal ein neues Passwort eingeben. Das Skript erzeugt den Schlüssel und trägt die Secrets
+   `ANDROID_KEYSTORE_BASE64` und `ANDROID_KEYSTORE_PASSWORD` automatisch ins Repo ein.
+3. Links im Datei-Explorer `aufgaben-release.jks` mit Rechtsklick → **Download** sichern und
+   zusammen mit dem Passwort aufbewahren, z. B. im Passwort-Manager. **Geht beides verloren,
+   lässt sich die App nie wieder per Update aktualisieren.**
+4. Den Codespace danach löschen (github.com/codespaces → „…“ → Delete).
 
-   | Secret | Inhalt |
-   |---|---|
-   | `ANDROID_KEYSTORE_BASE64` | Inhalt von `aufgaben-release.jks.b64` |
-   | `ANDROID_KEYSTORE_PASSWORD` | Keystore-Passwort |
-   | `ANDROID_KEY_ALIAS` | `aufgaben` |
-   | `ANDROID_KEY_PASSWORD` | Schlüssel-Passwort (bei keytool oft identisch) |
+Kann das Skript die Secrets nicht selbst setzen, legt es eine `aufgaben-release.jks.b64` an
+und sagt, was Du unter **Settings → Secrets and variables → Actions** von Hand eintragen musst.
+Das Skript läuft genauso auf dem eigenen Rechner, wenn Java (und optional die GitHub CLI)
+installiert ist. Die `.jks`-Datei gehört **nicht** ins Repo (steht in `.gitignore`).
 
-3. Workflow neu laufen lassen (Actions → Android-APK → **Run workflow**).
-
-Die `.jks`-Datei gehört **nicht** ins Repo (steht in `.gitignore`).
+Danach ein Release anlegen (**Releases → Draft a new release**, Tag z. B. `v1.0.0` neu
+erstellen → **Publish release**). Der Workflow hängt die signierte APK nach ein paar Minuten an.
 
 ### Selbst bauen (optional)
 Mit Node.js 22, JDK 21 und Android SDK (z. B. über Android Studio):

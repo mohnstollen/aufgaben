@@ -6,7 +6,8 @@
   "license": "GPL-2.0",
   "scripts": {
     "build:web": "node scripts/build-web.mjs",
-    "sync": "npm run build:web && cap sync android"
+    "sync": "npm run build:web && cap sync android",
+    "test": "playwright test"
   },
   "dependencies": {
     "@capacitor/android": "8.5.3",
@@ -16,6 +17,7 @@
     "@capacitor/share": "8.0.3"
   },
   "devDependencies": {
-    "@capacitor/cli": "8.5.3"
+    "@capacitor/cli": "8.5.3",
+    "@playwright/test": "1.63.0"
   }
 }

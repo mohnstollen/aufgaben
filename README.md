@@ -14,6 +14,9 @@ Gerät (Local Storage) – kein Konto, kein Tracking. Optional lassen sie sich �
 - Antippen öffnet eine Aufgabe zum Bearbeiten
 - Auf dem Handy **wischen**: nach rechts = erledigt, nach links = löschen
 - Löschen und Abhaken lassen sich per **„Rückgängig“** zurücknehmen
+- **Wiederkehrende Aufgaben** (täglich, wöchentlich, monatlich …): beim Abhaken entsteht die nächste
+- **Verschieben**: Fälligkeitsdatum antippen → Heute, Morgen, Nächsten Montag, In 1 Woche, Datum wählen;
+  bei überfälligen Aufgaben „Alle auf heute“
 - Tags und Projekte bearbeiten/löschen
 - **Helles und dunkles Design** (automatisch nach Systemeinstellung oder fest wählbar)
 - Zurück-Taste schließt offene Dialoge
@@ -147,12 +150,29 @@ Nach Änderungen an `index.html` immer erst `npm run sync` ausführen.
 > `mohnstollen.github.io`. Hier unter `/aufgaben/` findet Android sie nicht, deshalb zeigt
 > die TWA eine Adressleiste.
 
+## 🧪 Automatische Tests
+Der Ordner `tests/` enthält Playwright-Tests für die wichtigsten Abläufe:
+- **Sync** gegen einen Nachbau der Nextcloud-WebDAV-Schnittstelle (`tests/helpers/mock-webdav.mjs`):
+  zwei Geräte, Löschen, Konflikte (412), komprimierte/fehlende ETags, gesperrte Dateien (423)
+- **Android-App** mit nachgebildeten Capacitor-Plugins: natives WebDAV, Zurück-Taste,
+  Backups, Teilen, Update-Prüfung
+- **Bedienung**: Gruppierung, Schnelleingabe, Bearbeiten, Rückgängig, Wischen, Filter, Design
+
+In GitHub Actions laufen sie bei jedem Pull Request und vor jedem APK-Build und Pages-Deploy
+(`.github/workflows/tests.yml`). **Schlägt ein Test fehl, gibt es weder ein Release noch ein
+Web-Update.** Lokal:
+```bash
+npm ci
+npx playwright install chromium   # einmalig
+npm test
+```
+
 ## 🔁 Änderungen / Updates ausrollen
 Nach Änderungen einfach neu pushen:
 ```bash
 git add -A && git commit -m "Update" && git push
 ```
-Die Service-Worker-Cache-Version steht in `sw.js` (`const CACHE = 'aufgaben-v13'`).
+Die Service-Worker-Cache-Version steht in `sw.js` (`const CACHE = 'aufgaben-v14'`).
 Bei größeren Änderungen die Zahl erhöhen (z. B. `aufgaben-v2`), damit Clients frisch laden.
 
 ## ⌨️ Schnelleingabe
@@ -168,6 +188,8 @@ Beim Anlegen einfach alles in eine Zeile schreiben, z. B.
 | `montag` … `sonntag` | nächster dieser Wochentag |
 | `+3t` / `+3d`, `+2w`, `+1m` | in 3 Tagen, 2 Wochen, 1 Monat |
 | `24.12.`, `24.12.27`, `2026-12-24` | festes Datum (ohne Jahr: nächstes Vorkommen) |
+| `täglich`, `wöchentlich`, `zweiwöchentlich`, `monatlich`, `jährlich` | wiederholt sich im festen Rhythmus |
+| `rec:+2w` / `rec:2w` | alle 2 Wochen ab Fälligkeit / ab Erledigung (wie todo.txt) |
 
 Nur das erste Datum wird erkannt; alles Übrige wird zum Namen.
 
@@ -220,6 +242,7 @@ aufgaben/
 ├─ package.json             # Capacitor-Abhängigkeiten & Build-Skripte
 ├─ capacitor.config.json    # Konfiguration der Android-App
 ├─ scripts/build-web.mjs    # kopiert die Web-App nach www/
+├─ tests/                   # Playwright-Tests (npm test)
 ├─ android/                 # natives Android-Projekt (inkl. WebDAV-Plugin)
 ├─ .gitignore
 ├─ README.md
@@ -230,6 +253,7 @@ aufgaben/
 │  ├─ apple-touch-icon.png
 │  └─ favicon.png
 └─ .github/workflows/
+   ├─ tests.yml             # Tests (vor Deploy und APK-Build)
    ├─ deploy.yml            # Auto-Deploy auf GitHub Pages
    └─ android.yml           # baut die APK
 ```

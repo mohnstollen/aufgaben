@@ -86,17 +86,23 @@ ein paar Vorteile mit:
 Die App-Daten sind von der Browser-/PWA-Version getrennt. Zum Umziehen den Nextcloud-Sync
 auf beiden einrichten oder per Export/Import übertragen.
 
-### APK herunterladen
+### APK herunterladen und aktualisieren
 Der Workflow `.github/workflows/android.yml` baut die APK automatisch:
-- **Bei jedem Push** mit Änderungen an der App: im Tab **Actions** → Lauf „Android-APK" →
-  unten unter **Artifacts** (als ZIP, darin die APK).
-- **Als Release:** einen Tag setzen, z. B.
-  ```bash
-  git tag v1.0.0 && git push origin v1.0.0
-  ```
-  Dann hängt die APK am Release unter **Releases**. Mit der App
-  [Obtainium](https://github.com/ImranR98/Obtainium) (Repo-URL eintragen) bekommst Du
-  neue Releases automatisch aufs Handy.
+- **Jede Änderung auf `main`** (z. B. ein gemergter PR) erzeugt automatisch ein **Release**
+  `v<major>.<minor>.<Laufnummer>`, z. B. `v1.1.14`. Die APK hängt als `aufgaben.apk` daran;
+  die neueste Version gibt es immer unter
+  https://github.com/mohnstollen/aufgaben/releases/latest/download/aufgaben.apk
+- **In der App** unter ⚙️ Einstellungen → App steht die installierte Version mit dem Button
+  **„Nach Updates suchen“**. Zusätzlich prüft die App beim Start (höchstens alle 6 Stunden) und
+  meldet eine neue Version mit „Laden“. Der Browser lädt die APK herunter; antippen und über die
+  installierte App installieren – die Daten bleiben erhalten.
+- Pushes auf andere Branches bauen nur eine Test-APK (Actions → Lauf → **Artifacts**), ohne Release.
+- Für einen Versionssprung (z. B. auf 2.0) die `version` in `package.json` anpassen.
+  Ein von Hand angelegter Tag `v*` erzeugt ebenfalls ein Release.
+
+Releases gibt es nur mit hinterlegtem Signier-Schlüssel (siehe unten), damit sich jedes Update
+direkt über die installierte App installieren lässt. Alternativ holt
+[Obtainium](https://github.com/ImranR98/Obtainium) neue Releases automatisch.
 
 Installieren: APK auf dem Handy öffnen und „Installation aus unbekannten Quellen" für den
 Browser bzw. die Dateien-App erlauben.
@@ -124,8 +130,7 @@ und sagt, was Du unter **Settings → Secrets and variables → Actions** von Ha
 Das Skript läuft genauso auf dem eigenen Rechner, wenn Java (und optional die GitHub CLI)
 installiert ist. Die `.jks`-Datei gehört **nicht** ins Repo (steht in `.gitignore`).
 
-Danach ein Release anlegen (**Releases → Draft a new release**, Tag z. B. `v1.0.0` neu
-erstellen → **Publish release**). Der Workflow hängt die signierte APK nach ein paar Minuten an.
+Ab dann erzeugt jede Änderung auf `main` automatisch ein signiertes Release.
 
 ### Selbst bauen (optional)
 Mit Node.js 22, JDK 21 und Android SDK (z. B. über Android Studio):
@@ -147,7 +152,7 @@ Nach Änderungen einfach neu pushen:
 ```bash
 git add -A && git commit -m "Update" && git push
 ```
-Die Service-Worker-Cache-Version steht in `sw.js` (`const CACHE = 'aufgaben-v12'`).
+Die Service-Worker-Cache-Version steht in `sw.js` (`const CACHE = 'aufgaben-v13'`).
 Bei größeren Änderungen die Zahl erhöhen (z. B. `aufgaben-v2`), damit Clients frisch laden.
 
 ## ⌨️ Schnelleingabe

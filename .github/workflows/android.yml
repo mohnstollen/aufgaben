@@ -2,7 +2,9 @@ name: Android-APK
 
 # Baut die Android-App (Capacitor) aus der Web-App.
 # - Bei jedem Push mit relevanten Änderungen: APK als Workflow-Artefakt
-# - Bei einem Tag "v*" (z. B. v1.2.0): zusätzlich GitHub-Release mit der APK
+# - Auf main: automatisch ein GitHub-Release v<major>.<minor>.<Laufnummer> (major.minor aus package.json),
+#   das die App über „Nach Updates suchen" findet
+# - Ein von Hand angelegter Tag "v*" (z. B. v2.0.0) erzeugt ebenfalls ein Release
 on:
   push:
     # Ohne "branches" würden bei gesetztem "tags"-Filter Branch-Pushes ignoriert
@@ -54,12 +56,19 @@ jobs:
 
       - name: Version bestimmen
         run: |
+          BASE=$(node -p "require('./package.json').version.split('.').slice(0,2).join('.')")
+          RUN=${{ github.run_number }}
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            echo "VERSION_NAME=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+            VERSION_NAME=${GITHUB_REF_NAME#v}; RELEASE_TAG=$GITHUB_REF_NAME
+          elif [[ "$GITHUB_REF" == refs/heads/main ]]; then
+            VERSION_NAME=$BASE.$RUN; RELEASE_TAG=v$VERSION_NAME
           else
-            echo "VERSION_NAME=0.0.${{ github.run_number }}-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+            VERSION_NAME=$BASE.$RUN-dev.${GITHUB_SHA::7}; RELEASE_TAG=""
           fi
-          echo "VERSION_CODE=${{ github.run_number }}" >> "$GITHUB_ENV"
+          echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=$RUN" >> "$GITHUB_ENV"
+          echo "Version $VERSION_NAME (Code $RUN)${RELEASE_TAG:+ → Release $RELEASE_TAG}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Signier-Schlüssel bereitstellen
         if: env.HAS_KEYSTORE == 'true'
@@ -93,9 +102,18 @@ jobs:
           path: ${{ runner.temp }}/aufgaben-*.apk
           if-no-files-found: error
 
+      # Nur signierte APKs werden veröffentlicht – sonst ließe sich das Update nicht über die App installieren
+      - name: Release-Datei vorbereiten
+        if: env.RELEASE_TAG != '' && env.HAS_KEYSTORE == 'true'
+        run: cp "$RUNNER_TEMP/aufgaben-$VERSION_NAME.apk" "$RUNNER_TEMP/aufgaben.apk"
+
       - name: Release veröffentlichen
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: env.RELEASE_TAG != '' && env.HAS_KEYSTORE == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ runner.temp }}/aufgaben-*.apk
+          tag_name: ${{ env.RELEASE_TAG }}
+          target_commitish: ${{ github.sha }}
+          name: Aufgaben ${{ env.VERSION_NAME }}
+          files: ${{ runner.temp }}/aufgaben.apk
           generate_release_notes: true
+          make_latest: true

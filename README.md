@@ -5,11 +5,18 @@ Gerät (Local Storage) – kein Konto, kein Tracking. Optional lassen sie sich �
 **eigene Nextcloud** zwischen mehreren Geräten synchronisieren.
 
 ## Features
-- Aufgaben mit Name, Fälligkeitsdatum, Priorität, Tags und Projekt
-- Sortieren nach Fälligkeit / Priorität / Name / Erstelldatum
-- Filtern nach Tags & Projekten, Live-Suche
+- Aufgaben mit Name, Fälligkeitsdatum, Priorität, Tags, Projekt (optional) und Notiz
+- **Schnelleingabe** im todo.txt-Stil (siehe unten)
+- Nach Fälligkeit **gruppiert**: Überfällig · Heute · Morgen · Nächste 7 Tage · Später · Ohne Datum,
+  mit relativen Angaben („heute“, „morgen“, „seit 2 Tagen“)
+- Sortieren nach Fälligkeit / Priorität / Name / Erstelldatum (bei Gleichstand nach Priorität bzw. Datum)
+- Filtern nach Tags & Projekten, Live-Suche (auch in Notizen); Ansicht und Filter bleiben gespeichert
+- Antippen öffnet eine Aufgabe zum Bearbeiten
+- Auf dem Handy **wischen**: nach rechts = erledigt, nach links = löschen
+- Löschen und Abhaken lassen sich per **„Rückgängig“** zurücknehmen
 - Tags und Projekte bearbeiten/löschen
-- Erledigte Aufgaben abhaken → landen im Archiv
+- **Helles und dunkles Design** (automatisch nach Systemeinstellung oder fest wählbar)
+- Zurück-Taste schließt offene Dialoge
 - **Export/Import** als JSON-Backup oder todo.txt
 - **Nextcloud-Sync** per WebDAV (optional)
 - **PWA**: installierbar, offline nutzbar
@@ -140,8 +147,24 @@ Nach Änderungen einfach neu pushen:
 ```bash
 git add -A && git commit -m "Update" && git push
 ```
-Die Service-Worker-Cache-Version steht in `sw.js` (`const CACHE = 'aufgaben-v11'`).
+Die Service-Worker-Cache-Version steht in `sw.js` (`const CACHE = 'aufgaben-v12'`).
 Bei größeren Änderungen die Zahl erhöhen (z. B. `aufgaben-v2`), damit Clients frisch laden.
+
+## ⌨️ Schnelleingabe
+Beim Anlegen einfach alles in eine Zeile schreiben, z. B.
+`Steuer machen +Büro @wichtig freitag (A)`. Die Vorschau zeigt sofort, was erkannt wurde.
+
+| Eingabe | Bedeutung |
+|---|---|
+| `+Projekt` | Projekt (wie in todo.txt) |
+| `@tag` oder `#tag` | Tag, mehrfach möglich |
+| `(A)` / `(B)` / `(C)` | Priorität Hoch / Mittel / Niedrig |
+| `heute`, `morgen`, `übermorgen` | Fälligkeit |
+| `montag` … `sonntag` | nächster dieser Wochentag |
+| `+3t` / `+3d`, `+2w`, `+1m` | in 3 Tagen, 2 Wochen, 1 Monat |
+| `24.12.`, `24.12.27`, `2026-12-24` | festes Datum (ohne Jahr: nächstes Vorkommen) |
+
+Nur das erste Datum wird erkannt; alles Übrige wird zum Namen.
 
 ## ☁️ Synchronisation mit Nextcloud
 Die App speichert alle Aufgaben als JSON-Datei in Deiner Nextcloud (Standard:

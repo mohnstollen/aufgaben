@@ -200,7 +200,7 @@
   .sync-pill.ok{color:#8ee6b4}
   .sync-pill.busy{color:#9dc0ff}
   .sync-pill.err{color:#ff9aa4; border-color:rgba(255,92,108,.5)}
-  .sync-pill.off{color:#ffd27a}
+  .sync-pill.off, .sync-pill.locked{color:#ffd27a}
   .native .web-only{display:none}
   .modal code{background:var(--surface2); padding:1px 6px; border-radius:5px; color:#c3b8ff}
 </style>
@@ -1127,6 +1127,8 @@ function restoreFromText(text){
    Ablauf: Datei laden (GET) → mit lokalem Stand zusammenführen → nur bei Unterschied hochladen (PUT).
    Mit If-Match: hat ein anderes Gerät die Datei zwischendurch geändert (412), wird erneut zusammengeführt. */
 const SYNC_DEFAULT_PATH = 'Aufgaben/aufgaben.json';
+/* 423 Locked: Nextcloud sperrt Dateien z. B., solange sie im Web-Editor geöffnet sind */
+const LOCKED_MSG = name => `„${name}" ist in der Nextcloud gesperrt – meist, weil sie dort im Editor geöffnet ist. Bitte schließen; die App versucht es jede Minute erneut. Deine Änderungen bleiben auf diesem Gerät erhalten.`;
 const syncState = { running:false, again:false, timer:null, noIfMatch:false };
 
 function getSyncCfg(){ try{ return JSON.parse(localStorage.getItem(LS_SYNC))||null; }catch(e){ return null; } }
@@ -1182,6 +1184,14 @@ async function davPut(cfg, segs, text, mime, etag){
   return r;
 }
 
+/* Nextclouds OC-ETag bleibt unverändert; den normalen ETag schreiben Proxys beim Komprimieren
+   gern um (nginx: W/"…", Apache: "…-gzip") – damit würde jedes If-Match mit 412 scheitern. */
+function syncEtag(headers){
+  const raw=headers.get('OC-ETag')||headers.get('ETag');
+  if(!raw) return null;
+  let e=raw.trim().replace(/^W\//,'').replace(/^"|"$/g,'').replace(/[-;](gzip|br|deflate|zstd)$/i,'');
+  return e ? '"'+e+'"' : null;
+}
 function parseRemote(text){
   let p;
   try{ p=JSON.parse(text); }catch(e){ throw new SyncError('Die Datei in der Nextcloud ist kein gültiges JSON und wird daher nicht überschrieben.'); }
@@ -1213,11 +1223,13 @@ async function syncNow({ manual=false }={}){
   try{
     const segs=davSegments(cfg.path);
     let done=false;
+    let conflicts=0;
     for(let attempt=0; attempt<3 && !done; attempt++){
-      const r=await dav(cfg, 'GET', segs);
+      // In der App unkomprimiert laden, damit kein Proxy den ETag verändert
+      const r=await dav(cfg, 'GET', segs, IS_NATIVE ? { headers:{ 'Accept-Encoding':'identity' } } : {});
       let remote=null, etag=null;
       if(r.status===200){
-        etag=r.headers.get('ETag')||r.headers.get('OC-ETag');
+        etag=syncEtag(r.headers);
         const text=await r.text();
         if(text.trim()) remote=parseRemote(text);
       }else if(r.status!==404){
@@ -1226,7 +1238,13 @@ async function syncNow({ manual=false }={}){
       applyMerged(mergeData(data, remote||{ tasks:[], projects:[], tags:[] }));
       if(remote && canon(remote)===canon(data)){ done=true; break; }   // Server ist bereits aktuell
       const put=await davPut(cfg, segs, JSON.stringify(syncPayload()), 'application/json', etag);
-      if(put.status===412) continue;   // zwischenzeitlich geändert → neu laden & zusammenführen
+      if(put.status===412){
+        // zwischenzeitlich geändert → neu laden & zusammenführen. Scheitert es zweimal in Folge,
+        // passt der ETag des Servers nicht zu If-Match → für diese Sitzung ohne If-Match weiter.
+        if(++conflicts>=2 && !syncState.noIfMatch){ syncState.noIfMatch=true; console.warn('If-Match wird vom Server nicht akzeptiert – Sync ohne Konfliktschutz.'); }
+        continue;
+      }
+      if(put.status===423) throw new SyncError(LOCKED_MSG(segs[segs.length-1]), { locked:true });
       if(!put.ok) throw new SyncError(`Speichern in der Nextcloud fehlgeschlagen (Fehler ${put.status}).`);
       done=true;
     }
@@ -1235,8 +1253,9 @@ async function syncNow({ manual=false }={}){
       const txt=buildTodoTxt();
       if(txt!==cfg.lastTodoTxt){
         const r=await davPut(cfg, [...segs.slice(0,-1), 'todo.txt'], txt, 'text/plain; charset=utf-8', null);
-        if(!r.ok) throw new SyncError(`todo.txt konnte nicht gespeichert werden (Fehler ${r.status}).`);
-        updateSyncCfg({ lastTodoTxt:txt });
+        if(r.status===423) console.warn('todo.txt ist gesperrt – wird beim nächsten Sync geschrieben.');
+        else if(!r.ok) throw new SyncError(`todo.txt konnte nicht gespeichert werden (Fehler ${r.status}).`);
+        else updateSyncCfg({ lastTodoTxt:txt });
       }
     }
     updateSyncCfg({ lastSync:Date.now(), lastError:null });
@@ -1245,7 +1264,8 @@ async function syncNow({ manual=false }={}){
   }catch(e){
     const msg=e instanceof SyncError ? e.message : 'Sync fehlgeschlagen: '+e.message;
     if(!e.offline) updateSyncCfg({ lastError:msg });
-    setSyncStatus(e.offline?'off':'err', msg);
+    setSyncStatus(e.offline?'off':(e.locked?'locked':'err'), msg);
+    if(e.locked) scheduleSync(60000);   // Sperre löst sich meist von selbst → in einer Minute erneut
     if(manual) toast(msg);
   }finally{
     syncState.running=false;
@@ -1265,7 +1285,7 @@ function setSyncStatus(state, msg){
   if(!syncConfigured(cfg)){ el.style.display='none'; return; }
   el.style.display='';
   el.className='sync-pill '+state;
-  const labels={ busy:'⟳ Sync …', ok:'☁️ '+(cfg.lastSync?fmtTime(cfg.lastSync):'bereit'), err:'⚠️ Fehler', off:'☁️ offline' };
+  const labels={ busy:'⟳ Sync …', ok:'☁️ '+(cfg.lastSync?fmtTime(cfg.lastSync):'bereit'), err:'⚠️ Fehler', off:'☁️ offline', locked:'🔒 gesperrt' };
   el.textContent=labels[state]||labels.ok;
   el.title=msg || (cfg.lastSync ? 'Zuletzt synchronisiert: '+new Date(cfg.lastSync).toLocaleString('de-DE')+' – tippen zum Synchronisieren' : 'Tippen zum Synchronisieren');
 }

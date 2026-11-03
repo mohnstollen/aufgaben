@@ -1065,6 +1065,7 @@ function dueGroup(t){
 const GROUPS = [['overdue','Überfällig'],['today','Heute'],['tomorrow','Morgen'],['week','Nächste 7 Tage'],['later','Später'],['none','Ohne Datum']];
 
 function render(){
+  pushWidget();
   $('cntActive').textContent = data.tasks.filter(t=>!t.done).length;
   $('cntArchive').textContent = data.tasks.filter(t=>t.done).length;
   let items = data.tasks.filter(t => view==='archive' ? t.done : !t.done);
@@ -1194,21 +1195,22 @@ function attachSwipe(wrap, card, t){
 }
 
 /* ---------- Task actions (mit Rückgängig statt Rückfrage) ---------- */
+/* Erledigt-Status setzen. Wiederkehrend: nächste Aufgabe anlegen – die ID ergibt sich aus Serie + Datum,
+   damit zwei Geräte, die dieselbe Aufgabe erledigen, beim Sync nicht zwei Folgeaufgaben erzeugen. */
+function setDone(t, done){
+  t.done=done; t.doneAt=done?Date.now():null;
+  if(!done || !parseRec(t.rec)) return null;
+  const due=nextDue(t), id2=`${t.id.split('~')[0]}~${due}`;
+  if(data.tasks.some(x=>x.id===id2)) return null;
+  const spawned={ ...t, id:id2, due, done:false, doneAt:null, created:Date.now() };
+  delete spawned.updatedAt;
+  data.tasks.push(spawned);
+  return spawned;
+}
 function toggleDone(id){
   const t=data.tasks.find(x=>x.id===id); if(!t) return;
   const prev={ done:t.done, doneAt:t.doneAt };
-  t.done=!t.done; t.doneAt=t.done?Date.now():null;
-  // Wiederkehrend: nächste Aufgabe anlegen. Die ID ergibt sich aus Serie + Datum, damit zwei Geräte,
-  // die dieselbe Aufgabe erledigen, beim Sync nicht zwei Folgeaufgaben erzeugen.
-  let spawned=null;
-  if(t.done && parseRec(t.rec)){
-    const due=nextDue(t), id2=`${t.id.split('~')[0]}~${due}`;
-    if(!data.tasks.some(x=>x.id===id2)){
-      spawned={ ...t, id:id2, due, done:false, doneAt:null, created:Date.now() };
-      delete spawned.updatedAt;
-      data.tasks.push(spawned);
-    }
-  }
+  const spawned=setDone(t, !t.done);
   save(); render();
   const msg = !t.done ? `„${shortName(t.name)}" wieder geöffnet`
     : spawned ? `Erledigt ✓ – nächstes Mal ${relDue(spawned.due)}` : `„${shortName(t.name)}" erledigt ✓`;
@@ -1245,11 +1247,39 @@ function submitQuickAdd(){
 /* Android: Eingaben aus dem Schnelleingabe-Dialog (Verknüpfung, Kachel, Widget, Teilen) übernehmen */
 async function importQuickInbox(){
   if(!Native.QuickInbox) return;
-  let items=[];
-  try{ ({ items=[] } = await Native.QuickInbox.take()); }catch(_){ return; }
+  let items=[], done=[];
+  try{ ({ items=[], done=[] } = await Native.QuickInbox.take()); }catch(_){ return; }
+  // im Widget abgehakt
+  const finished=done.map(id=>data.tasks.find(t=>t.id===id && !t.done)).filter(Boolean);
+  finished.forEach(t=>setDone(t, true));
+  if(finished.length){ save(); render(); }
   const added=items.map(i=>addFromText(i.text, i.ts||Date.now())).filter(Boolean);
-  if(added.length===1) toast(`„${shortName(added[0].name)}" aus der Schnelleingabe übernommen`);
-  else if(added.length) toast(`${added.length} Aufgaben aus der Schnelleingabe übernommen`);
+  const msgs=[];
+  if(added.length===1) msgs.push(`„${shortName(added[0].name)}" aus der Schnelleingabe übernommen`);
+  else if(added.length) msgs.push(`${added.length} Aufgaben aus der Schnelleingabe übernommen`);
+  if(finished.length) msgs.push(finished.length===1 ? `„${shortName(finished[0].name)}" im Widget erledigt ✓` : `${finished.length} im Widget erledigt ✓`);
+  if(msgs.length) toast(msgs.join(' · '));
+}
+
+/* Android-Widget: Schnellaufgaben, überfällige und heutige Aufgaben – nur senden, wenn sich etwas geändert hat */
+let lastWidgetData='';
+function widgetPayload(){
+  const open=data.tasks.filter(t=>!t.done);
+  const kindOf=t=> t.quick ? 'quick' : !t.due ? null : dayDiff(t.due)<0 ? 'overdue' : dayDiff(t.due)===0 ? 'today' : null;
+  const order={ quick:0, overdue:1, today:2 };
+  const items=open.map(t=>({ t, k:kindOf(t) })).filter(x=>x.k)
+    .sort((a,b)=>order[a.k]-order[b.k] || (a.k==='quick' ? a.t.created-b.t.created : cmpDue(a.t,b.t)||cmpPrio(a.t,b.t)))
+    .slice(0, 60)
+    .map(({ t, k })=>({ id:t.id, name:t.name, kind:k,
+      label: k==='quick' ? '⚡ Schnell' : (k==='overdue' ? 'Überfällig · '+relDue(t.due) : 'Heute') + (t.prio==='Hoch' ? ' · 🔴 Hoch' : '') }));
+  return JSON.stringify({ open:open.length, items });
+}
+function pushWidget(){
+  if(!IS_NATIVE || !Native.Widget) return;
+  const payload=widgetPayload();
+  if(payload===lastWidgetData) return;
+  lastWidgetData=payload;
+  Native.Widget.update({ data:payload }).catch(()=>{});
 }
 
 /* ---------- Verschieben ---------- */

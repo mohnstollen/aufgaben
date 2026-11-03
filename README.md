@@ -92,7 +92,9 @@ ein paar Vorteile mit:
     eigenes Icon auf den Homescreen ziehen)
   - **Schnelleinstellungen-Kachel** „＋ Aufgabe“: Statusleiste herunterziehen → Stift-Symbol →
     Kachel in die Liste ziehen
-  - **Widget** „＋ Aufgabe“ für den Homescreen
+  - **Widget** für den Homescreen: zeigt ⚡ Schnellaufgaben, überfällige und heutige Aufgaben –
+    Kreis antippen = erledigt, Text antippen = App öffnen, „＋“ = neue Aufgabe. Das Widget zeigt
+    den Stand vom letzten Öffnen der App; im Widget Erledigtes übernimmt die App beim nächsten Öffnen.
   - **Teilen**: in einer anderen App Text oder Link teilen → „Neue Aufgabe“
 
   Reiner Text wird eine Schnellaufgabe; Syntax wie `morgen`, `#tag`, `(A)` funktioniert wie in

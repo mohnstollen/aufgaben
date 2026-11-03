@@ -56,7 +56,20 @@
             </intent-filter>
         </service>
 
-        <!-- Homescreen-Widget „＋ Aufgabe“ -->
+        <!-- Widget: Liste und Klick-Zwischenstation (abhaken / App öffnen) -->
+        <service
+            android:name=".WidgetListService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
+        <activity
+            android:name=".WidgetActionActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="io.github.mohnstollen.aufgaben.widget"
+            android:theme="@android:style/Theme.NoDisplay" />
+
+        <!-- Homescreen-Widget mit Aufgabenliste und „＋“ -->
         <receiver
             android:name=".QuickAddWidget"
             android:exported="false"

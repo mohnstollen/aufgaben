@@ -14,7 +14,10 @@
     <string name="quick_add_short">Neue Aufgabe</string>
     <string name="quick_add_long">Neue Aufgabe hinzufügen</string>
     <string name="quick_add_tile">＋ Aufgabe</string>
-    <string name="quick_add_widget">Neue Aufgabe</string>
-    <string name="quick_add_widget_text">＋ Aufgabe</string>
-    <string name="quick_add_widget_desc">Öffnet die Schnelleingabe für neue Aufgaben</string>
+    <string name="quick_add_widget">Aufgaben</string>
+    <string name="quick_add_widget_desc">Schnellaufgaben, überfällige und heutige Aufgaben – abhaken und neue hinzufügen</string>
+    <string name="widget_title">Aufgaben</string>
+    <string name="widget_title_count">Aufgaben · %1$d offen</string>
+    <string name="widget_empty">Nichts Dringendes 🎉</string>
+    <string name="widget_done">Erledigt</string>
 </resources>

@@ -349,3 +349,31 @@ test('Kompakte Kopfzeile: erste Aufgabe beginnt im oberen Drittel', async ({ bro
   const top = await page.locator('.task').first().evaluate(e => e.getBoundingClientRect().top);
   expect(top).toBeLessThan(844 / 3);
 });
+
+test.describe('Android-Widget', () => {
+  const widget = page => page.evaluate(() => window.__native.widget);
+
+  test('zeigt Schnell, Überfällig und Heute – in dieser Reihenfolge, ohne spätere Aufgaben', async ({ browser }) => {
+    const { page } = await openApp(browser, { now: NOW, native: {}, data: { projects: [], tags: [], tasks: [
+      ...DATA.tasks, task('q1', 'Milch kaufen', { quick: true, created: 5 })] } });
+    await expect.poll(() => widget(page)).toBeTruthy();
+    const w = await widget(page);
+    expect(w.open).toBe(6);
+    expect(w.items.map(i => [i.name, i.kind, i.label])).toEqual([
+      ['Milch kaufen', 'quick', '⚡ Schnell'],
+      ['Rechnung bezahlen', 'overdue', 'Überfällig · seit 2 Tagen · 🔴 Hoch'],
+      ['Zahnarzt anrufen', 'today', 'Heute · 🔴 Hoch'],
+      ['Bier austrinken', 'today', 'Heute']]);
+    // Änderung in der App → Widget wird aktualisiert
+    await page.click('[aria-label="Als erledigt markieren: Bier austrinken"]');
+    await expect.poll(async () => (await widget(page)).items.length).toBe(3);
+  });
+
+  test('im Widget abgehakte Aufgaben werden übernommen (inkl. Folgeaufgabe bei Wiederholung)', async ({ browser }) => {
+    const { page } = await openApp(browser, { now: NOW, native: { done: ['t1', 'r1', 'gibtsnicht'] }, data: { projects: [], tags: [], tasks: [
+      ...DATA.tasks, task('r1', 'Müll rausbringen', { due: '2026-10-28', rec: '+1w' })] } });
+    await expect(page.locator('#toastMsg')).toHaveText('2 im Widget erledigt ✓');
+    const st = await page.evaluate(() => data.tasks.filter(t => ['t1', 'r1', 'r1~2026-11-04'].includes(t.id)).map(t => [t.id, t.done]));
+    expect(st).toEqual([['t1', true], ['r1', true], ['r1~2026-11-04', false]]);
+  });
+});

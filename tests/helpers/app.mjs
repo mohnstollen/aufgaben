@@ -51,7 +51,7 @@ export const addTask = (page, name, extra = {}) => page.evaluate(([name, extra])
  * Wird im Browser ausgeführt: bildet window.Capacitor mit den genutzten Plugins nach.
  * Aufrufe landen in window.__native.log, Dateien in window.__native.fs.
  */
-function nativeMock({ version = '1.1.0', files = {}, inbox = [] } = {}) {
+function nativeMock({ version = '1.1.0', files = {}, inbox = [], done = [] } = {}) {
   const log = [], fs = { ...files }, listeners = {};
   window.__native = { log, fs, fire: (ev, arg) => listeners[ev] && listeners[ev](arg) };
   window.Capacitor = { isNativePlatform: () => true, Plugins: {
@@ -71,6 +71,7 @@ function nativeMock({ version = '1.1.0', files = {}, inbox = [] } = {}) {
       getInfo: async () => ({ version }) },
     SystemBars: { setStyle: async o => { log.push(`bars ${o.style}`); } },
     Browser: { open: async o => { log.push(`browser ${o.url}`); }, close: async () => { throw new Error('nur iOS'); } },
-    QuickInbox: { take: async () => { const items = inbox.splice(0); log.push(`inbox ${items.length}`); return { items }; } },
+    QuickInbox: { take: async () => { const items = inbox.splice(0), d = done.splice(0); log.push(`inbox ${items.length}`); return { items, done: d }; } },
+    Widget: { update: async o => { window.__native.widget = JSON.parse(o.data); log.push('widget'); } },
   } };
 }

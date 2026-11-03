@@ -3,13 +3,13 @@ import { test, expect } from '@playwright/test';
 import { openApp, task } from './helpers/app.mjs';
 
 const NOW = new Date('2026-10-28T10:00:00+01:00');   // Mittwoch
-const DATA = { projects: ['Allgemein', 'Büro', 'Haus'], tags: ['wichtig', 'telefon'], tasks: [
-  task('o1', 'Rechnung bezahlen', { due: '2026-10-26', prio: 'Hoch', project: 'Büro', tags: ['wichtig'] }),
-  task('t1', 'Bier austrinken', { due: '2026-10-28', project: 'Allgemein', note: 'Kühlschrank unten' }),
-  task('t2', 'Zahnarzt anrufen', { due: '2026-10-28', prio: 'Hoch', project: 'Haus', tags: ['telefon'] }),
-  task('w1', 'Rasen mähen', { due: '2026-11-01', prio: 'Niedrig', project: 'Haus' }),
+const DATA = { projects: [], tags: ['büro', 'haus', 'wichtig', 'telefon'], tasks: [
+  task('o1', 'Rechnung bezahlen', { due: '2026-10-26', prio: 'Hoch', tags: ['büro', 'wichtig'] }),
+  task('t1', 'Bier austrinken', { due: '2026-10-28', note: 'Kühlschrank unten' }),
+  task('t2', 'Zahnarzt anrufen', { due: '2026-10-28', prio: 'Hoch', tags: ['haus', 'telefon'] }),
+  task('w1', 'Rasen mähen', { due: '2026-11-01', prio: 'Niedrig', tags: ['haus'] }),
   task('n1', 'Buch lesen', { prio: 'Niedrig' }),
-  task('d1', 'Steuer', { project: 'Büro', done: true, doneAt: 1 }),
+  task('d1', 'Steuer', { tags: ['büro'], done: true, doneAt: 1 }),
 ] };
 const open = (browser, o = {}) => openApp(browser, { data: DATA, now: NOW, ...o });
 const taskNames = page => page.locator('.tname').allTextContents();
@@ -26,13 +26,14 @@ test('Liste nach Fälligkeit gruppiert, bei gleichem Datum wichtigere zuerst', a
   expect(errors).toEqual([]);
 });
 
-test('Schnelleingabe erkennt Projekt, Tags, Priorität und Datumsangaben', async ({ browser }) => {
+test('Schnelleingabe erkennt Tags, Priorität, Wiederholung und Datumsangaben', async ({ browser }) => {
   const { page } = await open(browser);
   const cases = {
-    'Steuer machen +Büro @wichtig freitag (A)': { name: 'Steuer machen', due: '2026-10-30', prio: 'Hoch', project: 'Büro', tags: ['wichtig'] },
+    'Steuer machen #büro @wichtig freitag (A)': { name: 'Steuer machen', due: '2026-10-30', prio: 'Hoch', tags: ['büro', 'wichtig'] },
+    'Farbe kaufen +Garten #einkaufen': { name: 'Farbe kaufen', tags: ['Garten', 'einkaufen'] },      // +Projekt ist jetzt ein Tag
     'Geschenk kaufen #familie 24.12.': { name: 'Geschenk kaufen', due: '2026-12-24', tags: ['familie'] },
     'Termin +3t': { name: 'Termin', due: '2026-10-31' },
-    'Reifen wechseln +2w +Auto': { name: 'Reifen wechseln', due: '2026-11-11', project: 'Auto' },
+    'Reifen wechseln +2w +Auto': { name: 'Reifen wechseln', due: '2026-11-11', tags: ['Auto'] },
     'Abo kündigen +1m': { name: 'Abo kündigen', due: '2026-11-28' },
     'Heute Abend kochen': { name: 'Abend kochen', due: '2026-10-28' },
     'Arzt übermorgen': { name: 'Arzt', due: '2026-10-30' },
@@ -48,30 +49,31 @@ test('Schnelleingabe erkennt Projekt, Tags, Priorität und Datumsangaben', async
   for (const [input, want] of Object.entries(cases)) {
     const got = await page.evaluate(i => parseQuick(i), input);
     expect(got, input).toEqual({ name: want.name, due: want.due || null, prio: want.prio || null,
-      project: want.project || null, tags: want.tags || [], rec: want.rec || null });
+      tags: want.tags || [], rec: want.rec || null });
   }
 });
 
 test('Neue Aufgabe per Schnelleingabe und Enter', async ({ browser }) => {
   const { page } = await open(browser);
   await page.click('#fab');
-  await page.fill('#fQuick', 'Laub rechen +Garten @draußen morgen (B)');
+  await page.fill('#fQuick', 'Laub rechen #garten @draußen morgen (B)');
   await expect(page.locator('#quickPreview')).toContainText('morgen');
   await page.press('#fQuick', 'Enter');
   const t = await page.evaluate(() => data.tasks.find(x => x.name === 'Laub rechen'));
-  expect(t).toMatchObject({ due: '2026-10-29', prio: 'Mittel', project: 'Garten', tags: ['draußen'] });
+  expect(t).toMatchObject({ due: '2026-10-29', prio: 'Mittel', tags: ['garten', 'draußen'] });
   await expect(page.locator('.group-h.tomorrow')).toHaveText('Morgen 1');
 });
 
-test('Antippen öffnet Bearbeiten: Notiz und „kein Projekt“', async ({ browser }) => {
+test('Antippen öffnet Bearbeiten: Notiz und Tags', async ({ browser }) => {
   const { page } = await open(browser);
   await page.click('text=Rasen mähen');
   await expect(page.locator('#taskModalTitle')).toHaveText('Aufgabe bearbeiten');
   await page.fill('#fNote', 'Benzin kaufen');
-  await page.selectOption('#fProject', '');
+  await page.fill('#fTags', 'haus, einkaufen');
   await page.click('#saveTask');
   const t = await page.evaluate(() => data.tasks.find(x => x.id === 'w1'));
-  expect(t).toMatchObject({ note: 'Benzin kaufen', project: null });
+  expect(t).toMatchObject({ note: 'Benzin kaufen', tags: ['haus', 'einkaufen'] });
+  await expect(page.locator('.chip:has-text("#einkaufen")')).toBeVisible();     // neuer Tag erscheint als Filter
   await page.fill('#search', 'benzin');
   expect(await taskNames(page)).toEqual(['Rasen mähen']);
 });
@@ -111,11 +113,11 @@ test('Wischen: nach rechts erledigt, nach links gelöscht', async ({ browser }) 
 
 test('Ansicht und Filter bleiben nach Neuladen erhalten', async ({ browser }) => {
   const { page } = await open(browser);
-  await page.click('.chip:has-text("Haus")');
+  await page.click('.chip:has-text("#haus")');
   expect(await taskNames(page)).toEqual(['Zahnarzt anrufen', 'Rasen mähen']);
   await page.selectOption('#sort', 'prio');
   await page.reload();
-  await expect(page.locator('.chip.active')).toHaveText(['Haus']);
+  await expect(page.locator('.chip.active')).toHaveText(['#haus']);
   await expect(page.locator('#sort')).toHaveValue('prio');
   await page.click('.chip.reset');
   await expect(page.locator('.chip.active')).toHaveCount(0);
@@ -238,5 +240,69 @@ test.describe('Verschieben', () => {
     await expect(page.locator('#fDue')).toHaveValue('2026-11-04');
     await page.click('#dueQuick button:has-text("✕")');
     await expect(page.locator('#fDue')).toHaveValue('');
+  });
+});
+
+test.describe('Schnellaufgaben', () => {
+  test('Eingabezeile: reiner Text wird Schnellaufgabe oben im eigenen Abschnitt, kompakt', async ({ browser }) => {
+    const { page, errors } = await open(browser);
+    await page.fill('#quickAdd', 'Milch kaufen');
+    await page.press('#quickAdd', 'Enter');
+    await page.fill('#quickAdd', 'Paket abholen (B) dann');           // „(B)“ ist Syntax → normale Aufgabe
+    await page.press('#quickAdd', 'Enter');
+    await page.fill('#quickAdd', 'Schlüssel nachmachen');
+    await page.click('#quickAddBtn');
+    await expect(page.locator('#quickAdd')).toHaveValue('');
+    await expect(page.locator('.group-h').first()).toHaveText('⚡ Schnell 2');
+    expect((await taskNames(page)).slice(0, 2)).toEqual(['Milch kaufen', 'Schlüssel nachmachen']);
+    await expect(page.locator('.task.is-quick .meta')).toHaveCount(0);   // nur Text, keine Badges
+    const t = await page.evaluate(() => data.tasks.filter(x => x.created > 1).map(x => ({ name: x.name, quick: !!x.quick, prio: x.prio })));
+    expect(t).toEqual([{ name: 'Milch kaufen', quick: true, prio: 'Mittel' },
+      { name: 'Paket abholen dann', quick: false, prio: 'Mittel' }, { name: 'Schlüssel nachmachen', quick: true, prio: 'Mittel' }]);
+    await expect(page.locator('#cntActive')).toHaveText('8');
+    expect(errors).toEqual([]);
+  });
+
+  test('Mit Datum oder Tag entsteht eine normale Aufgabe', async ({ browser }) => {
+    const { page } = await open(browser);
+    await page.fill('#quickAdd', 'Zahnarzt morgen #telefon');
+    await page.press('#quickAdd', 'Enter');
+    await expect(page.locator('#toastMsg')).toHaveText('„Zahnarzt" angelegt · morgen');
+    const t = await page.evaluate(() => data.tasks.find(x => x.name === 'Zahnarzt'));
+    expect(t).toMatchObject({ due: '2026-10-29', tags: ['telefon'] });
+    expect(t.quick).toBeUndefined();
+    await expect(page.locator('.group-h.tomorrow')).toHaveText('Morgen 1');
+    await expect(page.locator('.group-h.qsec')).toHaveCount(0);
+  });
+
+  test('Abhaken archiviert, Rückgängig holt zurück', async ({ browser }) => {
+    const { page } = await open(browser);
+    await page.fill('#quickAdd', 'Milch kaufen'); await page.press('#quickAdd', 'Enter');
+    await page.click('[aria-label="Als erledigt markieren: Milch kaufen"]');
+    await expect(page.locator('.group-h.qsec')).toHaveCount(0);
+    await page.click('#tabArchive');
+    await expect(page.locator('#quickAddBox')).toBeHidden();         // Eingabezeile nur bei „Offen“
+    await expect(page.locator('.task.is-quick.done .tname')).toHaveText('Milch kaufen');
+  });
+
+  test('Im Dialog umwandeln: normal → Schnellaufgabe und zurück', async ({ browser }) => {
+    const { page } = await open(browser);
+    await page.click('text=Rasen mähen');
+    await page.check('#fIsQuick');
+    await expect(page.locator('#fullFields')).toBeHidden();
+    await page.click('#saveTask');
+    let t = await page.evaluate(() => data.tasks.find(x => x.id === 'w1'));
+    expect(t).toMatchObject({ quick: true, due: null, tags: [] });
+    await expect(page.locator('.task.is-quick .tname')).toHaveText('Rasen mähen');
+    expect(await page.evaluate(() => taskToTodoTxt(data.tasks.find(x => x.id === 'w1')))).toMatch(/^\d{4}-\d{2}-\d{2} Rasen mähen$/);
+
+    await page.click('text=Rasen mähen');
+    await expect(page.locator('#fIsQuick')).toBeChecked();
+    await page.uncheck('#fIsQuick');
+    await page.fill('#fDue', '2026-11-05');
+    await page.click('#saveTask');
+    t = await page.evaluate(() => data.tasks.find(x => x.id === 'w1'));
+    expect(t.quick).toBeUndefined();
+    expect(t.due).toBe('2026-11-05');
   });
 });

@@ -27,7 +27,7 @@ test('Einrichtung über den Dialog: falsches Passwort, dann Datei und Ordner anl
   expect(errors).toEqual([]);
 });
 
-test('Zwei Geräte: Altdaten, Löschen, Tag löschen und gleichzeitige Änderungen', async ({ browser }) => {
+test('Zwei Geräte: Altdaten (mit Projekten), Löschen, Tag löschen und gleichzeitige Änderungen', async ({ browser }) => {
   dav = await startDav();
   const legacy = { projects: ['Allgemein', 'Büro'], tags: ['wichtig', 'privat'], tasks: [   // altes Format ohne updatedAt
     task('a1', 'Steuer', { prio: 'Hoch', project: 'Büro', tags: ['wichtig'] }),
@@ -47,9 +47,13 @@ test('Zwei Geräte: Altdaten, Löschen, Tag löschen und gleichzeitige Änderung
   for (const { page } of [A, B]) {
     expect(await names(page)).toEqual(['Steuer', 'Zahnarzt anrufen']);
     const tags = await page.evaluate(() => data.tags.slice().sort());
-    expect(tags).toEqual(['neuA', 'telefon', 'wichtig']);
+    expect(tags).toEqual(['Büro', 'neuA', 'telefon', 'wichtig']);         // Projekt „Büro“ wurde zum Tag, „Allgemein“ entfällt
+    const steuer = await page.evaluate(() => data.tasks.find(t => t.id === 'a1'));
+    expect(steuer.tags).toEqual(['wichtig', 'Büro']);
+    expect('project' in steuer).toBe(false);
   }
   expect(dav.names()).toEqual(['Steuer', 'Zahnarzt anrufen']);
+  expect(dav.json().data.tasks.some(t => 'project' in t)).toBe(false);
   expect([...A.errors, ...B.errors]).toEqual([]);
 });
 
@@ -112,14 +116,14 @@ test('Optionale todo.txt wird neben der JSON-Datei abgelegt', async ({ browser }
   await configureSync(page, dav, { todoTxt: true });
   await addTask(page, 'Steuer', { prio: 'Hoch', project: 'Büro', tags: ['wichtig'] });
   await syncNow(page);
-  expect(dav.files.get('Aufgaben/todo.txt').body).toMatch(/^\(A\) \d{4}-\d{2}-\d{2} Steuer \+Büro @wichtig\n$/);
+  expect(dav.files.get('Aufgaben/todo.txt').body).toMatch(/^\(A\) \d{4}-\d{2}-\d{2} Steuer @wichtig @Büro\n$/);
 });
 
 test('Import „Zusammenführen“ überspringt doppelte Aufgaben', async ({ browser }) => {
   const { page } = await openApp(browser);
   const count = await page.evaluate(() => {
     for (let i = 0; i < 2; i++) {
-      pendingImport = parseTodoTxtFile('(A) Neu importiert +Büro @wichtig\n');
+      pendingImport = parseTodoTxtFile('(A) Neu importiert +Büro @wichtig\n');   // +Projekt wird beim Import zum Tag
       $('importMode').value = 'merge'; confirmImport();
     }
     return data.tasks.filter(t => t.name === 'Neu importiert').length;

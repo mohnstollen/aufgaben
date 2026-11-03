@@ -5,19 +5,22 @@ Gerät (Local Storage) – kein Konto, kein Tracking. Optional lassen sie sich �
 **eigene Nextcloud** zwischen mehreren Geräten synchronisieren.
 
 ## Features
-- Aufgaben mit Name, Fälligkeitsdatum, Priorität, Tags, Projekt (optional) und Notiz
+- Aufgaben mit Name, Fälligkeitsdatum, Priorität, Tags (mehrere pro Aufgabe) und Notiz –
+  Projekte gibt es nicht mehr, sie wurden automatisch zu Tags
+- **⚡ Schnellaufgaben**: Eingabezeile oben in der Liste – reiner Text wird eine kompakte
+  Schnellaufgabe (nur Text, eigener Abschnitt oben); mit Datum/Tag/Priorität eine normale Aufgabe
 - **Schnelleingabe** im todo.txt-Stil (siehe unten)
 - Nach Fälligkeit **gruppiert**: Überfällig · Heute · Morgen · Nächste 7 Tage · Später · Ohne Datum,
   mit relativen Angaben („heute“, „morgen“, „seit 2 Tagen“)
 - Sortieren nach Fälligkeit / Priorität / Name / Erstelldatum (bei Gleichstand nach Priorität bzw. Datum)
-- Filtern nach Tags & Projekten, Live-Suche (auch in Notizen); Ansicht und Filter bleiben gespeichert
+- Filtern nach Tags, Live-Suche (auch in Notizen); Ansicht und Filter bleiben gespeichert
 - Antippen öffnet eine Aufgabe zum Bearbeiten
 - Auf dem Handy **wischen**: nach rechts = erledigt, nach links = löschen
 - Löschen und Abhaken lassen sich per **„Rückgängig“** zurücknehmen
 - **Wiederkehrende Aufgaben** (täglich, wöchentlich, monatlich …): beim Abhaken entsteht die nächste
 - **Verschieben**: Fälligkeitsdatum antippen → Heute, Morgen, Nächsten Montag, In 1 Woche, Datum wählen;
   bei überfälligen Aufgaben „Alle auf heute“
-- Tags und Projekte bearbeiten/löschen
+- Tags bearbeiten/löschen
 - **Helles und dunkles Design** (automatisch nach Systemeinstellung oder fest wählbar)
 - Zurück-Taste schließt offene Dialoge
 - **Export/Import** als JSON-Backup oder todo.txt
@@ -179,12 +182,11 @@ Bei größeren Änderungen die Zahl erhöhen (z. B. `aufgaben-v2`), damit Client
 
 ## ⌨️ Schnelleingabe
 Beim Anlegen einfach alles in eine Zeile schreiben, z. B.
-`Steuer machen +Büro @wichtig freitag (A)`. Die Vorschau zeigt sofort, was erkannt wurde.
+`Steuer machen #büro #wichtig freitag (A)`. Die Vorschau zeigt sofort, was erkannt wurde.
 
 | Eingabe | Bedeutung |
 |---|---|
-| `+Projekt` | Projekt (wie in todo.txt) |
-| `@tag` oder `#tag` | Tag, mehrfach möglich |
+| `#tag` (auch `@tag`, `+tag`) | Tag, mehrfach möglich – `+Projekt` aus todo.txt wird ebenfalls zum Tag |
 | `(A)` / `(B)` / `(C)` | Priorität Hoch / Mittel / Niedrig |
 | `heute`, `morgen`, `übermorgen` | Fälligkeit |
 | `montag` … `sonntag` | nächster dieser Wochentag |

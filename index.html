@@ -108,6 +108,17 @@
   .group-h .n{font-weight:500; opacity:.8}
   .group-h.overdue{color:var(--c-red)}
   .group-h.today{color:var(--c-blue)}
+  .group-h.qsec{color:var(--c-amber)}
+  .quick-add{display:flex; align-items:center; gap:10px; background:var(--surface); border:1px dashed var(--border);
+    border-radius:var(--radius); padding:4px 6px 4px 14px; margin-bottom:12px}
+  .quick-add:focus-within{border-style:solid; border-color:var(--accent)}
+  .quick-add input{flex:1; min-width:0; border:none; background:none; color:var(--text); font-size:16px; padding:10px 0; outline:none; font-family:inherit}
+  .quick-add .qa-btn{border:none; background:var(--accent); color:#fff; border-radius:10px; width:36px; height:36px; font-size:20px; cursor:pointer}
+  .task.is-quick{padding:8px 8px 8px 14px; align-items:center; border-left-color:var(--border)}
+  .task.is-quick .check{margin-top:0}
+  .task.is-quick .tname{font-weight:500}
+  .quick-toggle{display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--surface2); border-radius:10px; margin-bottom:14px; font-size:14px; cursor:pointer}
+  .quick-toggle input{width:18px; height:18px; accent-color:var(--accent)}
   .group-h .gh-btn{margin-left:auto; text-transform:none; letter-spacing:0; font-size:12px; font-weight:600; font-family:inherit;
     background:none; border:1px solid currentColor; color:inherit; border-radius:14px; padding:4px 10px; cursor:pointer}
   button.badge{border:none; font-family:inherit; cursor:pointer}
@@ -312,6 +323,12 @@
     <button type="button" class="tab" role="tab" aria-selected="false" id="tabArchive">Erledigt<span class="cnt" id="cntArchive"></span></button>
   </div>
 
+  <div class="quick-add" id="quickAddBox">
+    <span aria-hidden="true">⚡</span>
+    <input type="text" id="quickAdd" placeholder="Schnellaufgabe … (Enter)" autocomplete="off" enterkeyhint="done" aria-label="Schnellaufgabe hinzufügen">
+    <button type="button" class="qa-btn" id="quickAddBtn" aria-label="Hinzufügen">+</button>
+  </div>
+
   <div class="list" id="list"></div>
 </div>
 
@@ -326,9 +343,9 @@
 
     <div class="quick" id="quickBox">
       <label for="fQuick">Schnelleingabe (todo.txt-Stil)</label>
-      <input type="text" id="fQuick" placeholder="z. B. Steuer machen +Büro @wichtig freitag (A)" autocomplete="off" enterkeyhint="done">
+      <input type="text" id="fQuick" placeholder="z. B. Steuer machen #büro #wichtig freitag (A)" autocomplete="off" enterkeyhint="done">
       <div class="syntax">
-        <code>+Projekt</code> · <code>@tag</code> oder <code>#tag</code> (mehrfach) · <code>(A)</code>/<code>(B)</code>/<code>(C)</code> = Hoch/Mittel/Niedrig<br>
+        <code>#tag</code> (auch <code>@tag</code>, <code>+tag</code>; mehrfach) · <code>(A)</code>/<code>(B)</code>/<code>(C)</code> = Hoch/Mittel/Niedrig<br>
         Wiederholen: <code>täglich</code> <code>wöchentlich</code> <code>monatlich</code> <code>jährlich</code> <code>rec:2w</code><br>
         Fällig: <code>heute</code> <code>morgen</code> <code>übermorgen</code> <code>freitag</code> <code>+3t</code> <code>+2w</code> <code>24.12.</code> <code>2026-12-24</code>
       </div>
@@ -342,6 +359,8 @@
         <label>Name der Aufgabe *</label>
         <input type="text" id="fName" placeholder="Was ist zu tun?">
       </div>
+      <label class="quick-toggle"><input type="checkbox" id="fIsQuick"> ⚡ Schnellaufgabe – nur der Text, ohne Datum, Priorität und Tags</label>
+      <div id="fullFields">
       <div class="row2">
         <div class="field">
           <label>Fälligkeitsdatum</label>
@@ -365,17 +384,14 @@
         <select id="fRec"></select>
       </div>
       <div class="field">
-        <label>Projekt</label>
-        <select id="fProject"></select>
-      </div>
-      <div class="field">
         <label>Tags</label>
-        <input type="text" id="fTags" placeholder="z. B. wichtig, büro, telefon">
+        <input type="text" id="fTags" placeholder="z. B. garten, einkaufen, telefon">
         <div class="hint">Mehrere Tags mit Komma trennen. Neue Tags werden automatisch angelegt.</div>
       </div>
       <div class="field">
         <label for="fNote">Notiz</label>
         <textarea id="fNote" rows="3" placeholder="Details, Links, Telefonnummern …"></textarea>
+      </div>
       </div>
     </div>
 
@@ -422,7 +438,7 @@
 
     <div class="set-group">
       <h3>Organisation</h3>
-      <button class="btn ghost block" id="manageBtn">🏷️ Tags &amp; Projekte verwalten</button>
+      <button class="btn ghost block" id="manageBtn">🏷️ Tags verwalten</button>
     </div>
 
     <div class="set-group">
@@ -482,15 +498,7 @@
 <!-- Manage Modal -->
 <div class="overlay" id="manageOverlay">
   <div class="modal">
-    <h2>Tags &amp; Projekte verwalten</h2>
-    <div class="manage-group">
-      <h3>Projekte</h3>
-      <div id="projList"></div>
-      <div class="add-inline">
-        <input type="text" id="newProj" placeholder="Neues Projekt…">
-        <button class="btn primary" id="addProj">+</button>
-      </div>
-    </div>
+    <h2>Tags verwalten</h2>
     <div class="manage-group">
       <h3>Tags</h3>
       <div id="tagList"></div>
@@ -515,7 +523,7 @@
         <option value="merge">Zusammenführen (bestehende Daten behalten)</option>
         <option value="replace">Ersetzen (alle aktuellen Daten überschreiben)</option>
       </select>
-      <div class="hint" id="importHint">Beim Zusammenführen werden nur neue Aufgaben, Tags und Projekte ergänzt. Doppelte werden übersprungen.</div>
+      <div class="hint" id="importHint">Beim Zusammenführen werden nur neue Aufgaben und Tags ergänzt. Doppelte werden übersprungen.</div>
     </div>
     <div class="field">
       <div id="importSummary" class="hint" style="font-size:13px"></div>
@@ -661,7 +669,8 @@ const Native = IS_NATIVE ? window.Capacitor.Plugins : {};
 if(IS_NATIVE) document.documentElement.classList.add('native');
 const TOMBSTONE_DAYS = 180;
 /* tombstones: { taskId: gelöschtAm }, listLog: { 'p:Name'|'t:Name': {ts, del} } – nötig für den Sync */
-const defaultData = { tasks:[], projects:['Allgemein'], tags:['wichtig'], tombstones:{}, listLog:{} };
+/* projects bleibt als leere Liste in den Daten, damit ältere App-Versionen die Sync-Datei weiter lesen können */
+const defaultData = { tasks:[], projects:[], tags:[], tombstones:{}, listLog:{} };
 let data = load();
 let snapshot = takeSnapshot(data);
 
@@ -680,11 +689,22 @@ function normalizeData(d){
   if(!d.tombstones || typeof d.tombstones!=='object') d.tombstones={};
   if(!d.listLog || typeof d.listLog!=='object') d.listLog={};
   d.tasks.forEach(t=>{ if(!t.id) t.id=uid(); if(!t.updatedAt) t.updatedAt=t.doneAt||t.created||0; });
-  if(!d.projects.length) d.projects=['Allgemein'];
+  return migrateProjects(d);
+}
+/* Es gibt nur noch Tags: aus einem Projekt wird ein Tag. „Allgemein“ war nur ein Platzhalter und entfällt. */
+function migrateProjects(d){
+  d.tasks.forEach(t=>{
+    if(!('project' in t)) return;
+    if(t.project && t.project!=='Allgemein'){ t.tags=t.tags||[]; if(!t.tags.includes(t.project)) t.tags.push(t.project); }
+    delete t.project;
+  });
+  (d.projects||[]).forEach(p=>{ if(p!=='Allgemein' && !d.tags.includes(p) && !d.listLog?.['t:'+p]?.del) d.tags.push(p); });
+  d.projects=[];
+  d.tasks.forEach(t=>(t.tags||[]).forEach(tg=>{ if(!d.tags.includes(tg)) d.tags.push(tg); }));
   return d;
 }
 function persist(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); }
-function save(){ trackChanges(); persist(); autoBackup(); scheduleSync(); }
+function save(){ migrateProjects(data); trackChanges(); persist(); autoBackup(); scheduleSync(); }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
 /* ---------- Änderungsverfolgung ----------
@@ -735,8 +755,7 @@ function mergeData(a,b){
   };
   const projects=mergeList('p', a.projects, b.projects||[], tasks.map(t=>t.project));
   const tags=mergeList('t', a.tags, b.tags||[], tasks.flatMap(t=>t.tags||[]));
-  if(!projects.length) projects.push('Allgemein');
-  return { tasks, projects, tags, tombstones, listLog };
+  return migrateProjects({ tasks, projects, tags, tombstones, listLog });
 }
 /* Reihenfolge-unabhängige Darstellung, um "hat sich etwas geändert?" zu prüfen */
 function canon(d){
@@ -753,14 +772,12 @@ const ui = loadUi();
 let view = ui.view==='archive' ? 'archive' : 'active';
 let sortBy = ['due','prio','name','created'].includes(ui.sortBy) ? ui.sortBy : 'due';
 let searchTerm = '';
-let activeFilters = {
-  tags:new Set((ui.tags||[]).filter(t=>data.tags.includes(t))),
-  projects:new Set((ui.projects||[]).filter(p=>data.projects.includes(p))) };
+let activeFilters = { tags:new Set((ui.tags||[]).filter(t=>data.tags.includes(t))) };
 let pendingImport = null;
 function loadUi(){ try{ return JSON.parse(localStorage.getItem(LS_UI))||{}; }catch(e){ return {}; } }
 function saveUi(){
   try{ localStorage.setItem(LS_UI, JSON.stringify({ view, sortBy, filtersOpen:!!ui.filtersOpen,
-    tags:[...activeFilters.tags], projects:[...activeFilters.projects] })); }catch(e){}
+    tags:[...activeFilters.tags] })); }catch(e){}
 }
 
 /* ---------- Elements ---------- */
@@ -843,11 +860,10 @@ function taskToTodoTxt(t){
     parts.push('x'); parts.push(toDateStr(t.doneAt)||toDateStr(Date.now()));
     if(t.created) parts.push(toDateStr(t.created));
   } else {
-    if(t.prio && PRIO_TO_LETTER[t.prio]) parts.push('('+PRIO_TO_LETTER[t.prio]+')');
+    if(t.prio && PRIO_TO_LETTER[t.prio] && !t.quick) parts.push('('+PRIO_TO_LETTER[t.prio]+')');
     if(t.created) parts.push(toDateStr(t.created));
   }
   parts.push(t.name);
-  if(t.project) parts.push('+'+String(t.project).replace(/\s+/g,'_'));
   (t.tags||[]).forEach(tg=> parts.push('@'+String(tg).replace(/\s+/g,'_')));
   if(t.due) parts.push('due:'+t.due);
   if(t.rec) parts.push('rec:'+t.rec);
@@ -857,7 +873,7 @@ function taskToTodoTxt(t){
 function todoTxtToTask(line){
   let s=(line||'').trim();
   if(!s || s.startsWith('#')) return null;
-  let done=false, doneAt=null, created=null, prio=null, due=null, project=null, rec=null;
+  let done=false, doneAt=null, created=null, prio=null, due=null, rec=null;
   const tags=[];
   if(/^x\s+/i.test(s)){
     done=true; s=s.replace(/^x\s+/i,'');
@@ -874,8 +890,7 @@ function todoTxtToTask(line){
   }
   const words=s.split(/\s+/); const nameWords=[];
   for(const w of words){
-    if(w.startsWith('+') && w.length>1){ if(!project) project=w.slice(1); }
-    else if(w.startsWith('@') && w.length>1){ const tg=w.slice(1); if(!tags.includes(tg)) tags.push(tg); }
+    if((w[0]==='+' || w[0]==='@') && w.length>1){ const tg=w.slice(1); if(!tags.includes(tg)) tags.push(tg); }   // +Projekt wird zum Tag
     else if(/^due:\d{4}-\d{2}-\d{2}$/i.test(w)){ due=w.slice(4); }
     else if(/^rec:/i.test(w) && parseRec(w.slice(4))){ rec=parseRec(w.slice(4)).value; }
     else if(/^pri:[A-Za-z]$/i.test(w)){ if(!prio) prio=LETTER_TO_PRIO[w.slice(4).toUpperCase()]||null; }
@@ -883,9 +898,9 @@ function todoTxtToTask(line){
     else nameWords.push(w);
   }
   const name=nameWords.join(' ').trim();
-  if(!name && !project && !tags.length) return null;
+  if(!name && !tags.length) return null;
   const t={ id:uid(), name:name||'(ohne Titel)', due:due||null, prio:prio||'Mittel',
-    project:project||null, tags, done, doneAt:done?(doneAt||Date.now()):null, created:created||Date.now() };
+    tags, done, doneAt:done?(doneAt||Date.now()):null, created:created||Date.now() };
   if(rec) t.rec=rec;
   return t;
 }
@@ -893,12 +908,11 @@ function buildTodoTxt(){ return data.tasks.map(taskToTodoTxt).join('\n') + (data
 function parseTodoTxtFile(content){
   const tasks=content.split(/\r?\n/).map(todoTxtToTask).filter(Boolean);
   if(!tasks.length) throw new Error('Keine Aufgaben in der todo.txt gefunden.');
-  const projects=[], tags=[];
+  const tags=[];
   tasks.forEach(t=>{
-    if(t.project && !projects.includes(t.project)) projects.push(t.project);
     (t.tags||[]).forEach(tg=>{ if(!tags.includes(tg)) tags.push(tg); });
   });
-  return { tasks, projects, tags };
+  return { tasks, projects:[], tags };
 }
 
 /* ---------- Interne Snapshots ---------- */
@@ -1010,9 +1024,7 @@ async function nativeCleanupBackups(){
 const FILTER_CHIP_LIMIT = 8;
 function renderFilters(){
   const f = $('filters'); f.innerHTML='';
-  const chips = [
-    ...data.projects.map(p=>({ kind:'projects', v:p, label:p, dot:'var(--c-teal)' })),
-    ...data.tags.map(t=>({ kind:'tags', v:t, label:'#'+t, dot:'var(--c-violet)' })) ];
+  const chips = data.tags.map(t=>({ kind:'tags', v:t, label:'#'+t, dot:'var(--c-violet)' }));
   const many = chips.length > FILTER_CHIP_LIMIT;
   // Bei vielen Chips: eingeklappt nur die ersten plus alle aktiven zeigen
   const shown = many && !ui.filtersOpen ? chips.filter((c,i)=>i<FILTER_CHIP_LIMIT || activeFilters[c.kind].has(c.v)) : chips;
@@ -1028,9 +1040,9 @@ function renderFilters(){
   });
   if(many) addChip(' more', ui.filtersOpen ? 'weniger' : `+${chips.length-shown.length} weitere`,
     ()=>{ ui.filtersOpen=!ui.filtersOpen; saveUi(); renderFilters(); });
-  if(activeFilters.projects.size || activeFilters.tags.size) addChip(' reset', '✕ Filter zurücksetzen', resetFilters);
+  if(activeFilters.tags.size) addChip(' reset', '✕ Filter zurücksetzen', resetFilters);
 }
-function resetFilters(){ activeFilters.projects.clear(); activeFilters.tags.clear(); saveUi(); renderFilters(); render(); }
+function resetFilters(){ activeFilters.tags.clear(); saveUi(); renderFilters(); render(); }
 function toggleSet(set,v){ set.has(v)?set.delete(v):set.add(v); }
 
 const cmpDue = (a,b)=>{ if(!a.due&&!b.due)return 0; if(!a.due)return 1; if(!b.due)return -1; return a.due.localeCompare(b.due); };
@@ -1056,20 +1068,30 @@ function render(){
     const q = searchTerm.toLowerCase();
     items = items.filter(t =>
       t.name.toLowerCase().includes(q) ||
-      (t.project||'').toLowerCase().includes(q) ||
       (t.note||'').toLowerCase().includes(q) ||
       (t.tags||[]).some(tag=>tag.toLowerCase().includes(q)));
   }
-  if(activeFilters.projects.size) items = items.filter(t => activeFilters.projects.has(t.project));
   if(activeFilters.tags.size) items = items.filter(t => (t.tags||[]).some(tag=>activeFilters.tags.has(tag)));
   const chain = SORTS[sortBy] || SORTS.due;
   items.sort((a,b)=>{ for(const c of chain){ const r=c(a,b); if(r) return r; } return 0; });
   listEl.innerHTML='';
+  $('quickAddBox').style.display = view==='active' ? '' : 'none';
   if(!items.length){
-    const filtered = searchTerm || activeFilters.projects.size || activeFilters.tags.size;
+    const filtered = searchTerm || activeFilters.tags.size;
     listEl.innerHTML = `<div class="empty">${filtered ? 'Keine Aufgaben passen zu Suche oder Filter.'
       : view==='archive' ? 'Noch keine erledigten Aufgaben.' : 'Keine offenen Aufgaben. Lege mit + eine neue an!'}</div>`;
     return;
+  }
+  // Schnellaufgaben stehen oben in einem eigenen, kompakten Abschnitt (in der Reihenfolge des Anlegens)
+  if(view==='active'){
+    const quick=items.filter(t=>t.quick).sort((a,b)=>a.created-b.created);
+    if(quick.length){
+      const h=document.createElement('div'); h.className='group-h qsec';
+      h.innerHTML=`⚡ Schnell <span class="n">${quick.length}</span>`;
+      listEl.appendChild(h);
+      quick.forEach(t=>listEl.appendChild(taskCard(t)));
+      items=items.filter(t=>!t.quick);
+    }
   }
   if(view==='active' && sortBy==='due'){
     // Nach Fälligkeit gruppiert: Überfällig, Heute, Morgen, …
@@ -1097,23 +1119,22 @@ function taskCard(t){
   const dueBadge = !t.due ? '' : t.done ? `<span class="badge due" title="${fmtDate(t.due)}">📅 ${relDue(t.due)}</span>`
     : `<button type="button" class="badge due${overdue?' overdue':''}" data-act="postpone" title="${fmtDate(t.due)} – verschieben">📅 ${relDue(t.due)}</button>`;
   const recBadge = t.rec ? `<span class="badge rec" title="Wiederholt sich ${describeRec(t.rec)}">🔁 ${describeRec(t.rec)}</span>` : '';
-  const projBadge = t.project ? `<span class="badge proj">📁 ${escapeHtml(t.project)}</span>` : '';
   const tagBadges = (t.tags||[]).map(tg=>`<span class="badge tag">#${escapeHtml(tg)}</span>`).join('');
   const note = t.note ? `<div class="tnote">${escapeHtml(t.note)}</div>` : '';
   wrap.innerHTML = `
     <div class="swipe-bg" aria-hidden="true"><span class="sb-l">${t.done?'↺ Wieder öffnen':'✓ Erledigt'}</span><span class="sb-r">🗑 Löschen</span></div>
-    <div class="task prio-${t.prio}${t.done?' done':''}">
+    <div class="task ${t.quick?'is-quick':'prio-'+t.prio}${t.done?' done':''}">
       <button type="button" class="check ${t.done?'on':''}" data-act="toggle" role="checkbox" aria-checked="${!!t.done}"
         aria-label="${t.done?'Wieder öffnen':'Als erledigt markieren'}: ${escapeAttr(t.name)}">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
       </button>
       <div class="tbody" data-act="edit">
         <div class="tname">${escapeHtml(t.name)}</div>
-        ${note}
+        ${t.quick ? '' : `${note}
         <div class="meta">
           <span class="badge prio-${t.prio}">${prioIcon(t.prio)} ${t.prio}</span>
-          ${dueBadge}${recBadge}${projBadge}${tagBadges}
-        </div>
+          ${dueBadge}${recBadge}${tagBadges}
+        </div>`}
       </div>
       <div class="tactions">
         <button type="button" class="iconbtn" data-act="del" title="Löschen" aria-label="Löschen: ${escapeAttr(t.name)}">
@@ -1195,6 +1216,28 @@ function toggleDone(id){
   }});
 }
 
+/* ---------- Schnell anlegen (Eingabezeile, später auch Android-Schnelleingabe) ----------
+   Reiner Text → Schnellaufgabe. Enthält der Text Syntax (Datum, Tag, Priorität, Wiederholung),
+   entsteht eine normale Aufgabe mit diesen Angaben. */
+function addFromText(text){
+  const raw=String(text||'').trim(); if(!raw) return null;
+  const p=parseQuick(raw);
+  const plain = !p.due && !p.prio && !p.tags.length && !p.rec;
+  const t={ id:uid(), name: plain ? raw : (p.name||raw), due:p.due, prio:p.prio||'Mittel', tags:p.tags,
+    done:false, doneAt:null, created:Date.now() };
+  if(plain) t.quick=true;
+  if(p.rec) t.rec=p.rec;
+  p.tags.forEach(tg=>{ if(!data.tags.includes(tg)) data.tags.push(tg); });
+  data.tasks.push(t);
+  save(); renderFilters(); render();
+  return t;
+}
+function submitQuickAdd(){
+  const t=addFromText($('quickAdd').value); if(!t) return;
+  $('quickAdd').value='';
+  if(!t.quick) toast(`„${shortName(t.name)}" angelegt`+(t.due?` · ${relDue(t.due)}`:''));
+}
+
 /* ---------- Verschieben ---------- */
 function postpone(ids, due){
   const prev=ids.map(id=>{ const t=data.tasks.find(x=>x.id===id); return t && [t, t.due]; }).filter(Boolean);
@@ -1228,13 +1271,12 @@ function delTask(id){
     if(data.tasks.some(x=>x.id===t.id)) return;
     data.tasks.splice(Math.min(i, data.tasks.length), 0, t);
     (t.tags||[]).forEach(tg=>{ if(!data.tags.includes(tg)) data.tags.push(tg); });
-    if(t.project && !data.projects.includes(t.project)) data.projects.push(t.project);
     save(); renderFilters(); render();
   }});
 }
 
 /* ---------- Schnelleingabe-Parser ----------
-   todo.txt-Stil: +Projekt, @tag (auch #tag), (A)/(B)/(C), Datum in vielen Schreibweisen. */
+   todo.txt-Stil: #tag (auch @tag, +tag), (A)/(B)/(C), Datum in vielen Schreibweisen. */
 function parseDateWord(w){
   const s=w.toLowerCase().replace(/[,;]$/,'');
   const base=todayStart();
@@ -1263,7 +1305,7 @@ function parseDateWord(w){
   return null;
 }
 function parseQuick(text){
-  let due=null, prio=null, project=null, rec=null; const tags=[], nameWords=[];
+  let due=null, prio=null, rec=null; const tags=[], nameWords=[];
   for(const w of (text||'').split(/\s+/).filter(Boolean)){
     const pm=w.match(/^\(([A-Ca-c])\)$/);
     if(pm && !prio){ prio=LETTER_TO_PRIO[pm[1].toUpperCase()]; continue; }
@@ -1272,35 +1314,26 @@ function parseQuick(text){
     if(!rec && lw.startsWith('rec:') && parseRec(lw.slice(4))){ rec=parseRec(lw.slice(4)).value; continue; }
     const d=!due && parseDateWord(w);
     if(d){ due=d; continue; }
-    if(w.length>1 && w[0]==='+'){ if(!project) project=w.slice(1); continue; }
-    if(w.length>1 && (w[0]==='@' || w[0]==='#')){ const tg=w.slice(1); if(!tags.includes(tg)) tags.push(tg); continue; }
+    if(w.length>1 && '#@+'.includes(w[0])){ const tg=w.slice(1); if(!tags.includes(tg)) tags.push(tg); continue; }
     nameWords.push(w);
   }
-  return { name:nameWords.join(' '), due, prio, project, tags, rec };
+  return { name:nameWords.join(' '), due, prio, tags, rec };
 }
 function syncQuickToFields(){
   const parsed = parseQuick($('fQuick').value);
   $('fName').value = parsed.name; $('fDue').value = parsed.due||''; $('fPrio').value = parsed.prio||'Mittel';
-  const projSel = $('fProject');
-  if(parsed.project){
-    if(![...projSel.options].some(o=>o.value===parsed.project)){
-      const opt=document.createElement('option'); opt.value=parsed.project; opt.textContent=parsed.project+' (neu)'; projSel.appendChild(opt);
-    }
-    projSel.value = parsed.project;
-  }else projSel.value = '';
   $('fTags').value = parsed.tags.join(', ');
   refreshRecSelect(parsed.rec);
   renderQuickPreview(parsed);
 }
 function renderQuickPreview(parsed){
   const pv = $('quickPreview');
-  if(!parsed.name && !parsed.project && !parsed.tags.length && !parsed.due && !parsed.prio && !parsed.rec){ pv.innerHTML=''; return; }
+  if(!parsed.name && !parsed.tags.length && !parsed.due && !parsed.prio && !parsed.rec){ pv.innerHTML=''; return; }
   const prio = parsed.prio || 'Mittel';
   let html = `<div class="pv-name">${escapeHtml(parsed.name||'(kein Name)')}</div>`;
   html += `<span class="badge prio-${prio}">${prioIcon(prio)} ${prio}</span>`;
   if(parsed.due) html += `<span class="badge due">📅 ${relDue(parsed.due)} · ${fmtDate(parsed.due)}</span>`;
   if(parsed.rec) html += `<span class="badge rec">🔁 ${describeRec(parsed.rec)}</span>`;
-  if(parsed.project) html += `<span class="badge proj">📁 ${escapeHtml(parsed.project)}${data.projects.includes(parsed.project)?'':' •neu'}</span>`;
   parsed.tags.forEach(tg=>{ html += `<span class="badge tag">#${escapeHtml(tg)}${data.tags.includes(tg)?'':' •neu'}</span>`; });
   pv.innerHTML = html;
 }
@@ -1312,25 +1345,22 @@ function refreshRecSelect(sel){
   const list=REC_CHOICES.includes(v) ? REC_CHOICES : [...REC_CHOICES, v];
   $('fRec').innerHTML=list.map(x=>`<option value="${x}"${x===v?' selected':''}>${x ? describeRec(x).replace(/^./,c=>c.toUpperCase()) : 'Nie'}</option>`).join('');
 }
-function refreshProjectSelect(sel){
-  $('fProject').innerHTML = '<option value="">– kein Projekt –</option>' +
-    data.projects.map(p=>`<option value="${escapeAttr(p)}"${p===sel?' selected':''}>${escapeHtml(p)}</option>`).join('');
-}
+function setQuickMode(on){ $('fIsQuick').checked=on; $('fullFields').style.display = on ? 'none' : ''; }
 function openTask(id){
-  refreshProjectSelect(); $('fQuick').value=''; $('quickPreview').innerHTML='';
+  $('fQuick').value=''; $('quickPreview').innerHTML='';
   if(id){
     const t = data.tasks.find(x=>x.id===id);
     $('taskModalTitle').textContent='Aufgabe bearbeiten';
     $('quickBox').style.display='none'; $('toggleDetails').style.display='none'; $('detailsBox').classList.add('show');
     $('taskId').value=t.id; $('fName').value=t.name; $('fDue').value=t.due||''; $('fPrio').value=t.prio;
-    refreshProjectSelect(t.project); $('fTags').value=(t.tags||[]).join(', '); $('fNote').value=t.note||'';
-    refreshRecSelect(t.rec);
+    $('fTags').value=(t.tags||[]).join(', '); $('fNote').value=t.note||'';
+    refreshRecSelect(t.rec); setQuickMode(!!t.quick);
     $('deleteTaskBtn').style.display='';
   }else{
     $('taskModalTitle').textContent='Neue Aufgabe';
     $('quickBox').style.display='block'; $('toggleDetails').style.display='block'; $('detailsBox').classList.remove('show');
     $('taskId').value=''; $('fName').value=''; $('fDue').value=''; $('fPrio').value='Mittel';
-    refreshProjectSelect(); $('fTags').value=''; $('fNote').value=''; refreshRecSelect('');
+    $('fTags').value=''; $('fNote').value=''; refreshRecSelect(''); setQuickMode(false);
     $('deleteTaskBtn').style.display='none';
   }
   $('taskOverlay').classList.add('show');
@@ -1343,18 +1373,20 @@ function saveTask(){
   if(!name){ ($('quickBox').style.display!=='none'?$('fQuick'):$('fName')).focus(); return; }
   const tags = $('fTags').value.split(',').map(s=>s.trim()).filter(Boolean);
   tags.forEach(tg=>{ if(!data.tags.includes(tg)) data.tags.push(tg); });
-  const project = $('fProject').value || null;
-  if(project && !data.projects.includes(project)) data.projects.push(project);
   const note = $('fNote').value.trim();
   const id = $('taskId').value;
   const existing = id && data.tasks.find(x=>x.id===id);   // kann inzwischen per Sync gelöscht sein
-  const fields = { name, due:$('fDue').value||null, prio:$('fPrio').value, project, tags };
+  const fields = { name, due:$('fDue').value||null, prio:$('fPrio').value, tags };
   let task = existing;
   if(existing){ Object.assign(existing, fields); }
   else{ task = { id:uid(), ...fields, done:false, doneAt:null, created:Date.now() }; data.tasks.push(task); }
   if(note) task.note=note; else delete task.note;
   const rec=parseRec($('fRec').value)?.value;
   if(rec) task.rec=rec; else delete task.rec;
+  if($('fIsQuick').checked){                                   // Schnellaufgabe: alles außer dem Text entfällt
+    Object.assign(task, { due:null, prio:'Mittel', tags:[], quick:true });
+    delete task.note; delete task.rec;
+  }else delete task.quick;
   save(); closeTask(); renderFilters(); render();
 }
 
@@ -1366,14 +1398,6 @@ function closeSettings(){ $('settingsOverlay').classList.remove('show'); }
 function openManage(){ renderManage(); $('manageOverlay').classList.add('show'); }
 function closeManage(){ $('manageOverlay').classList.remove('show'); }
 function renderManage(){
-  const pl = $('projList'); pl.innerHTML='';
-  data.projects.forEach((p)=>{
-    const row=document.createElement('div'); row.className='manage-item';
-    row.innerHTML=`<input value="${escapeAttr(p)}"><button class="iconbtn" title="Löschen">🗑️</button>`;
-    row.querySelector('input').onchange=(e)=>renameProject(p, e.target.value.trim());
-    row.querySelector('button').onclick=()=>deleteProject(p);
-    pl.appendChild(row);
-  });
   const tl = $('tagList'); tl.innerHTML='';
   data.tags.forEach(t=>{
     const row=document.createElement('div'); row.className='manage-item';
@@ -1382,22 +1406,6 @@ function renderManage(){
     row.querySelector('button').onclick=()=>deleteTag(t);
     tl.appendChild(row);
   });
-}
-function renameProject(oldN,newN){
-  if(!newN||newN===oldN){ renderManage(); return; }
-  if(data.projects.includes(newN)){ alert('Projekt existiert bereits.'); renderManage(); return; }
-  data.projects=data.projects.map(p=>p===oldN?newN:p);
-  data.tasks.forEach(t=>{ if(t.project===oldN) t.project=newN; });
-  save(); renderManage(); renderFilters(); render();
-}
-function deleteProject(p){
-  const used=data.tasks.filter(t=>t.project===p).length;
-  if(!confirm(`Projekt "${p}" löschen?`+(used?`\n${used} Aufgabe(n) bleiben erhalten, nur ohne Projekt.`:''))) return;
-  data.projects=data.projects.filter(x=>x!==p);
-  if(!data.projects.length) data.projects=['Allgemein'];
-  data.tasks.forEach(t=>{ if(t.project===p) t.project=null; });
-  activeFilters.projects.delete(p);
-  save(); renderManage(); renderFilters(); render();
 }
 function renameTag(oldT,newT){
   if(!newT||newT===oldT){ renderManage(); return; }
@@ -1441,12 +1449,12 @@ function handleImportFile(e){
       else{
         try{ const parsed=JSON.parse(content); const d=parsed.data&&parsed.data.tasks?parsed.data:parsed;
           if(!Array.isArray(d.tasks)) throw new Error('json');
-          pending={ tasks:d.tasks, projects:Array.isArray(d.projects)?d.projects:[], tags:Array.isArray(d.tags)?d.tags:[] };
+          pending=migrateProjects({ tasks:d.tasks.map(t=>({...t})), projects:Array.isArray(d.projects)?d.projects:[], tags:Array.isArray(d.tags)?d.tags.slice():[] });
         }catch(_){ pending=parseTodoTxtFile(content); }
       }
       pendingImport=pending;
       const fmt=isTxt?'todo.txt':'JSON';
-      $('importSummary').innerHTML=`Format erkannt: <b>${fmt}</b><br>Gefunden: <b>${pending.tasks.length}</b> Aufgabe(n), <b>${pending.projects.length}</b> Projekt(e), <b>${pending.tags.length}</b> Tag(s).`;
+      $('importSummary').innerHTML=`Format erkannt: <b>${fmt}</b><br>Gefunden: <b>${pending.tasks.length}</b> Aufgabe(n), <b>${pending.tags.length}</b> Tag(s).`;
       $('importMode').value='merge'; updateImportHint();
       $('importOverlay').classList.add('show');
     }catch(err){ alert('Import fehlgeschlagen: '+err.message); }
@@ -1456,8 +1464,8 @@ function handleImportFile(e){
 function updateImportHint(){
   const merge=$('importMode').value==='merge';
   $('importHint').textContent = merge
-    ? 'Beim Zusammenführen werden nur neue Aufgaben, Tags und Projekte ergänzt. Doppelte werden übersprungen.'
-    : 'Achtung: Alle aktuellen Aufgaben, Tags und Projekte werden vollständig durch die Datei ersetzt.';
+    ? 'Beim Zusammenführen werden nur neue Aufgaben und Tags ergänzt. Doppelte werden übersprungen.'
+    : 'Achtung: Alle aktuellen Aufgaben und Tags werden vollständig durch die Datei ersetzt.';
 }
 function confirmImport(){
   if(!pendingImport) return;
@@ -1465,13 +1473,11 @@ function confirmImport(){
   if(mode==='replace'){
     if(!confirm('Wirklich alle aktuellen Daten ersetzen? Das kann nicht rückgängig gemacht werden.')) return;
     data.tasks=pendingImport.tasks;
-    data.projects=pendingImport.projects.length?pendingImport.projects.slice():['Allgemein'];
     data.tags=pendingImport.tags.slice();
-    data.tasks.forEach(t=>{ if(t.project && !data.projects.includes(t.project)) data.projects.push(t.project); });
     toast(`Import abgeschlossen: ${data.tasks.length} Aufgabe(n) geladen.`);
   }else{
     // Doppelte überspringen: gleiche ID oder inhaltlich gleiche Aufgabe (todo.txt hat keine IDs)
-    const dupKey=t=>[t.name, t.due||'', t.project||'', !!t.done].join('\u0001');
+    const dupKey=t=>[t.name, t.due||'', [...(t.tags||[])].sort().join(','), !!t.done].join('\u0001');
     const existingIds=new Set(data.tasks.map(t=>t.id));
     const existingKeys=new Set(data.tasks.map(dupKey)); let added=0, skipped=0;
     pendingImport.tasks.forEach(t=>{
@@ -1479,9 +1485,7 @@ function confirmImport(){
       const nt={...t}; if(!nt.id) nt.id=uid();
       existingIds.add(nt.id); existingKeys.add(dupKey(nt)); data.tasks.push(nt); added++;
     });
-    pendingImport.projects.forEach(p=>{ if(!data.projects.includes(p)) data.projects.push(p); });
     pendingImport.tags.forEach(tg=>{ if(!data.tags.includes(tg)) data.tags.push(tg); });
-    data.tasks.forEach(t=>{ if(t.project && !data.projects.includes(t.project)) data.projects.push(t.project); });
     toast(`Import abgeschlossen: ${added} Aufgabe(n) hinzugefügt`+(skipped?`, ${skipped} doppelte übersprungen.`:'.'));
   }
   pendingImport=null; $('importOverlay').classList.remove('show');
@@ -1530,9 +1534,7 @@ function restoreFromText(text){
   if(!confirm('Alle aktuellen Aufgaben durch dieses Backup ersetzen?')) return;
   let pending; try{ pending=parseTodoTxtFile(text); }catch(err){ alert('Wiederherstellung fehlgeschlagen: '+err.message); return; }
   data.tasks=pending.tasks;
-  data.projects=pending.projects.length?pending.projects.slice():['Allgemein'];
   data.tags=pending.tags.slice();
-  data.tasks.forEach(t=>{ if(t.project && !data.projects.includes(t.project)) data.projects.push(t.project); });
   save(); renderFilters(); render(); closeBackups();
   toast('Backup wiederhergestellt.');
 }
@@ -1625,7 +1627,6 @@ function applyMerged(merged){
   snapshot=takeSnapshot(data);
   if(canon(data)===before) return;
   persist(); autoBackup();
-  activeFilters.projects.forEach(p=>{ if(!data.projects.includes(p)) activeFilters.projects.delete(p); });
   activeFilters.tags.forEach(t=>{ if(!data.tags.includes(t)) activeFilters.tags.delete(t); });
   renderFilters(); render();
   if($('manageOverlay').classList.contains('show')) renderManage();
@@ -2002,6 +2003,9 @@ $('clearRegistry').onclick = ()=>{
 };
 $('search').oninput = e=>{ searchTerm=e.target.value; render(); };
 $('sort').onchange = e=>{ sortBy=e.target.value; saveUi(); render(); };
+$('quickAdd').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); submitQuickAdd(); } });
+$('quickAddBtn').onclick = ()=>{ submitQuickAdd(); $('quickAdd').focus(); };
+$('fIsQuick').onchange = e=>setQuickMode(e.target.checked);
 $('deleteTaskBtn').onclick = ()=>{ const id=$('taskId').value; closeTask(); if(id) delTask(id); };
 $('themeSel').onchange = e=>{ try{ localStorage.setItem(LS_THEME, e.target.value); }catch(_){} applyTheme(); };
 $('tabActive').onclick = ()=>switchView('active');
@@ -2011,9 +2015,7 @@ $('fQuick').addEventListener('input', syncQuickToFields);
 $('fQuick').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); saveTask(); } });
 $('toggleDetails').onclick = ()=>{ const box=$('detailsBox'); box.classList.toggle('show'); $('toggleDetails').textContent=(box.classList.contains('show')?'▾':'▸')+' Details anzeigen / manuell anpassen'; };
 
-$('addProj').onclick = ()=>{ const v=$('newProj').value.trim(); if(!v) return; if(data.projects.includes(v)){ alert('Projekt existiert bereits.'); return; } data.projects.push(v); $('newProj').value=''; save(); renderManage(); renderFilters(); };
 $('addTag').onclick = ()=>{ const v=$('newTag').value.trim(); if(!v) return; if(data.tags.includes(v)){ alert('Tag existiert bereits.'); return; } data.tags.push(v); $('newTag').value=''; save(); renderManage(); renderFilters(); };
-$('newProj').addEventListener('keydown',e=>{ if(e.key==='Enter') $('addProj').click(); });
 $('newTag').addEventListener('keydown',e=>{ if(e.key==='Enter') $('addTag').click(); });
 $('fName').addEventListener('keydown',e=>{ if(e.key==='Enter') saveTask(); });
 

@@ -1219,12 +1219,12 @@ function toggleDone(id){
 /* ---------- Schnell anlegen (Eingabezeile, später auch Android-Schnelleingabe) ----------
    Reiner Text → Schnellaufgabe. Enthält der Text Syntax (Datum, Tag, Priorität, Wiederholung),
    entsteht eine normale Aufgabe mit diesen Angaben. */
-function addFromText(text){
+function addFromText(text, created=Date.now()){
   const raw=String(text||'').trim(); if(!raw) return null;
   const p=parseQuick(raw);
   const plain = !p.due && !p.prio && !p.tags.length && !p.rec;
   const t={ id:uid(), name: plain ? raw : (p.name||raw), due:p.due, prio:p.prio||'Mittel', tags:p.tags,
-    done:false, doneAt:null, created:Date.now() };
+    done:false, doneAt:null, created };
   if(plain) t.quick=true;
   if(p.rec) t.rec=p.rec;
   p.tags.forEach(tg=>{ if(!data.tags.includes(tg)) data.tags.push(tg); });
@@ -1236,6 +1236,16 @@ function submitQuickAdd(){
   const t=addFromText($('quickAdd').value); if(!t) return;
   $('quickAdd').value='';
   if(!t.quick) toast(`„${shortName(t.name)}" angelegt`+(t.due?` · ${relDue(t.due)}`:''));
+}
+
+/* Android: Eingaben aus dem Schnelleingabe-Dialog (Verknüpfung, Kachel, Widget, Teilen) übernehmen */
+async function importQuickInbox(){
+  if(!Native.QuickInbox) return;
+  let items=[];
+  try{ ({ items=[] } = await Native.QuickInbox.take()); }catch(_){ return; }
+  const added=items.map(i=>addFromText(i.text, i.ts||Date.now())).filter(Boolean);
+  if(added.length===1) toast(`„${shortName(added[0].name)}" aus der Schnelleingabe übernommen`);
+  else if(added.length) toast(`${added.length} Aufgaben aus der Schnelleingabe übernommen`);
 }
 
 /* ---------- Verschieben ---------- */
@@ -2072,7 +2082,8 @@ if(IS_NATIVE){
     const open=OVERLAYS.find(id=>$(id).classList.contains('show'));
     if(open) $(open).classList.remove('show'); else Native.App.minimizeApp();
   });
-  Native.App.addListener('appStateChange', ({ isActive })=>{ if(isActive){ scheduleSync(300); scheduleAutoDownload(); checkUpdate(); pollNcLogin(); } });
+  Native.App.addListener('appStateChange', ({ isActive })=>{ if(isActive){ importQuickInbox(); scheduleSync(300); scheduleAutoDownload(); checkUpdate(); pollNcLogin(); } });
+  importQuickInbox();
   $('updateBtn').onclick = ()=>{ availableUpdate() ? downloadUpdate() : checkUpdate(true); };
   Native.App.getInfo().then(info=>{ appVersion=info.version||''; renderUpdate(); setTimeout(()=>checkUpdate(), 3000); }).catch(()=>{});
 }
@@ -2105,11 +2116,26 @@ window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferredP
 $('installBtn').onclick = async ()=>{ if(!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; $('installGroup').style.display='none'; };
 window.addEventListener('appinstalled',()=>{ $('installGroup').style.display='none'; toast('App wurde installiert. 🎉'); });
 
+/* ---------- Verknüpfung „Neue Aufgabe“ und Teilen (installierte Web-App) ----------
+   ?neu → Eingabezeile fokussieren; ?title/text/url (Teilen-Ziel) → Text vorbelegen */
+function handleLaunchParams(){
+  const q=new URLSearchParams(location.search);
+  if(!['neu','title','text','url'].some(k=>q.has(k))) return;
+  const shared=[q.get('title'), q.get('text'), q.get('url')].filter(Boolean)
+    .filter((v,i,a)=>a.indexOf(v)===i && !a.some(w=>w.length>v.length && w.includes(v)))   // doppelte Teile weglassen
+    .join(' ').replace(/\s+/g,' ').trim();
+  history.replaceState(null, '', location.pathname);
+  switchView('active');
+  if(shared) $('quickAdd').value=shared;
+  setTimeout(()=>$('quickAdd').focus(), 100);
+}
+
 /* ---------- Init ---------- */
 applyTheme();
 $('sort').value=sortBy;
 switchView(view);
 renderFilters();
+handleLaunchParams();
 autoBackup();
 setInterval(autoBackup, 5*60*1000);
 scheduleAutoDownload();

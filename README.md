@@ -87,7 +87,20 @@ ein paar Vorteile mit:
   alte Dateien werden nach Ablauf der Aufbewahrung automatisch gelöscht. Exporte laufen über
   das Android-**Teilen**-Menü (z. B. in Dateien, Nextcloud oder E-Mail).
 - **Zurück-Taste** schließt offene Dialoge, statt die App zu beenden.
+- **Schnell hinzufügen, ohne die App zu öffnen** – ein kleiner Eingabedialog über jeder App:
+  - **App-Verknüpfung**: lange auf das App-Icon drücken → „Neue Aufgabe“ (lässt sich auch als
+    eigenes Icon auf den Homescreen ziehen)
+  - **Schnelleinstellungen-Kachel** „＋ Aufgabe“: Statusleiste herunterziehen → Stift-Symbol →
+    Kachel in die Liste ziehen
+  - **Widget** „＋ Aufgabe“ für den Homescreen
+  - **Teilen**: in einer anderen App Text oder Link teilen → „Neue Aufgabe“
+
+  Reiner Text wird eine Schnellaufgabe; Syntax wie `morgen`, `#tag`, `(A)` funktioniert wie in
+  der App. Die Aufgabe erscheint (und synchronisiert) beim nächsten Öffnen der App.
 - Synchronisiert automatisch, sobald die App wieder in den Vordergrund kommt.
+
+Auch die installierte Browser-Version hat die Verknüpfung „Neue Aufgabe“ (Rechtsklick bzw.
+langes Drücken auf das Icon) und ist unter Android ein Ziel für „Teilen“.
 
 Die App-Daten sind von der Browser-/PWA-Version getrennt. Zum Umziehen den Nextcloud-Sync
 auf beiden einrichten oder per Export/Import übertragen.

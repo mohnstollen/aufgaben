@@ -306,3 +306,20 @@ test.describe('Schnellaufgaben', () => {
     expect(t.due).toBe('2026-11-05');
   });
 });
+
+test.describe('Verknüpfung und Teilen (installierte Web-App)', () => {
+  test('?neu fokussiert die Eingabezeile', async ({ browser }) => {
+    const { page } = await open(browser);
+    await page.goto(page.url() + '?neu');
+    await expect(page.locator('#quickAdd')).toBeFocused();
+    expect(page.url()).not.toContain('?');
+  });
+
+  test('Geteilter Text landet in der Eingabezeile', async ({ browser }) => {
+    const { page } = await open(browser);
+    await page.goto(page.url() + '?title=Artikel%20lesen&text=https%3A%2F%2Fexample.org%2Fa&url=https%3A%2F%2Fexample.org%2Fa');
+    await expect(page.locator('#quickAdd')).toHaveValue('Artikel lesen https://example.org/a');
+    await page.press('#quickAdd', 'Enter');
+    expect(await page.evaluate(() => data.tasks.find(t => t.name.startsWith('Artikel'))?.quick)).toBe(true);
+  });
+});

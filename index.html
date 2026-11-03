@@ -53,6 +53,7 @@
     color-scheme:light;
   }
   *{box-sizing:border-box}
+  [hidden]{display:none !important}
   html,body{overscroll-behavior-y:contain}
   body{
     margin:0; font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
@@ -60,20 +61,27 @@
     min-height:100vh; -webkit-tap-highlight-color:transparent;
   }
   header{
-    padding:calc(18px + var(--safe-area-inset-top, env(safe-area-inset-top))) 26px 14px; position:sticky; top:0; z-index:20;
+    padding:calc(8px + var(--safe-area-inset-top, env(safe-area-inset-top))) 12px 8px; position:sticky; top:0; z-index:20;
     background:var(--header-bg); backdrop-filter:blur(10px);
     border-bottom:1px solid var(--border);
   }
-  h1{margin:0; font-size:22px; letter-spacing:.3px}
-  .wrap{max-width:920px; margin:0 auto; padding:18px 20px 120px}
+  h1{margin:0; font-size:20px; letter-spacing:.3px}
+  .wrap{max-width:920px; margin:0 auto; padding:10px 14px 120px}
+  .head-inner{max-width:920px; margin:0 auto; display:flex; align-items:center; gap:4px}
+  .head-inner h1{flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-left:4px}
+  .hbtn{position:relative; width:40px; height:40px; border-radius:10px; border:none; background:none; color:var(--muted);
+    display:grid; place-items:center; cursor:pointer; flex-shrink:0}
+  .hbtn:hover,.hbtn.on{background:var(--surface2); color:var(--text)}
+  .hbtn.active{color:var(--accent)}
+  .hbtn .badge-n{position:absolute; top:4px; right:3px; min-width:16px; height:16px; border-radius:8px; padding:0 4px;
+    background:var(--accent); color:#fff; font-size:10.5px; font-weight:700; line-height:16px; text-align:center}
+  .hbtn select{position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%}   /* natives Auswahlmenü über dem Symbol */
+  .panel{margin-bottom:10px}
+  .searchrow{display:flex; align-items:center; gap:6px; background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; padding:0 4px 0 12px}
+  .searchrow:focus-within{border-color:var(--accent)}
+  .searchrow input{flex:1; min-width:0; border:none; background:none; color:var(--text); font-size:16px; padding:10px 0; outline:none; font-family:inherit}
 
-  .toolbar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:16px}
-  .search{flex:1 1 220px; position:relative}
-  .search input{
-    width:100%; padding:11px 12px 11px 38px; border-radius:10px;
-    border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:16px;
-  }
-  .search svg{position:absolute; left:12px; top:50%; transform:translateY(-50%); opacity:.5}
   select,button,input,textarea{font-family:inherit}
   .ctrl{
     padding:10px 12px; border-radius:10px; border:1px solid var(--border);
@@ -81,7 +89,7 @@
   }
   .ctrl:hover{border-color:var(--accent)}
 
-  .filters{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px}
+  .filters{display:flex; flex-wrap:wrap; gap:8px}
   .chip{
     padding:7px 12px; border-radius:20px; border:1px solid var(--border); font-family:inherit;
     background:var(--surface); font-size:12.5px; cursor:pointer; color:var(--muted);
@@ -93,7 +101,7 @@
   .chip.more{border-style:dashed}
   .chip.reset{color:var(--c-red); border-color:var(--c-red)}
 
-  .tabs{display:flex; gap:6px; margin-bottom:14px}
+  .tabs{display:flex; gap:6px; margin-bottom:10px}
   .tab{
     padding:9px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-family:inherit;
     color:var(--muted); border:1px solid transparent; background:none;
@@ -110,11 +118,11 @@
   .group-h.today{color:var(--c-blue)}
   .group-h.qsec{color:var(--c-amber)}
   .quick-add{display:flex; align-items:center; gap:10px; background:var(--surface); border:1px dashed var(--border);
-    border-radius:var(--radius); padding:4px 6px 4px 14px; margin-bottom:12px}
+    border-radius:var(--radius); padding:2px 4px 2px 14px; margin-bottom:10px}
   .quick-add:focus-within{border-style:solid; border-color:var(--accent)}
-  .quick-add input{flex:1; min-width:0; border:none; background:none; color:var(--text); font-size:16px; padding:10px 0; outline:none; font-family:inherit}
+  .quick-add input{flex:1; min-width:0; border:none; background:none; color:var(--text); font-size:16px; padding:9px 0; outline:none; font-family:inherit}
   .quick-add .qa-btn{border:none; background:var(--accent); color:#fff; border-radius:10px; width:36px; height:36px; font-size:20px; cursor:pointer}
-  .task.is-quick{padding:8px 8px 8px 14px; align-items:center; border-left-color:var(--border)}
+  .task.is-quick{padding:4px 6px 4px 12px; align-items:center; border-left-color:var(--border)}
   .task.is-quick .check{margin-top:0}
   .task.is-quick .tname{font-weight:500}
   .quick-toggle{display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--surface2); border-radius:10px; margin-bottom:14px; font-size:14px; cursor:pointer}
@@ -131,7 +139,7 @@
   .due-quick button{font-size:12px; padding:5px 10px; border-radius:14px; border:1px solid var(--border);
     background:var(--surface); color:var(--text); cursor:pointer; font-family:inherit}
 
-  .list{display:flex; flex-direction:column; gap:10px}
+  .list{display:flex; flex-direction:column; gap:8px}
   .swipe{position:relative; border-radius:var(--radius)}
   .swipe-bg{position:absolute; inset:0; border-radius:var(--radius); display:none; align-items:center;
     justify-content:space-between; padding:0 22px; font-weight:600; font-size:14px; color:#fff}
@@ -144,7 +152,7 @@
   .task{
     position:relative; touch-action:pan-y;
     background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
-    padding:12px 12px 12px 14px; display:flex; gap:10px; align-items:flex-start;
+    padding:10px 10px 10px 12px; display:flex; gap:10px; align-items:flex-start;
     border-left:4px solid var(--border); transition:.15s;
   }
   .task:hover{border-color:var(--accent); border-left-color:var(--accent)}
@@ -270,13 +278,11 @@
   .fname{font-family:ui-monospace,Consolas,monospace; font-size:12.5px}
   .stale-tag{font-size:10.5px; color:var(--c-amber); background:var(--c-amber-bg); padding:2px 7px; border-radius:12px; margin-left:6px}
 
-  .head-row{display:flex; align-items:center; justify-content:space-between; gap:12px}
-  .head-row h1{min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .sync-pill{
     padding:6px 12px; border-radius:20px; border:1px solid var(--border); background:var(--surface);
     color:var(--muted); font-size:12.5px; cursor:pointer; white-space:nowrap; flex-shrink:0;
   }
-  @media (max-width:480px){ header{padding-left:4px; padding-right:4px} h1{font-size:19px} }
+  @media (max-width:480px){ .head-inner h1{font-size:19px} .sync-pill{padding:5px 9px} }
   .sync-pill:hover{border-color:var(--accent)}
   .sync-pill.ok{color:var(--c-green)}
   .sync-pill.busy{color:var(--c-blue)}
@@ -294,29 +300,30 @@
 </head>
 <body>
 <header>
-  <div class="wrap head-row" style="padding-bottom:0">
-    <h1>📋 Aufgabenverwaltung</h1>
+  <div class="head-inner">
+    <h1>Aufgaben</h1>
     <button id="syncStatus" class="sync-pill" style="display:none" title="Jetzt synchronisieren"></button>
+    <button type="button" class="hbtn" id="searchBtn" title="Suchen" aria-label="Suchen"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+    <button type="button" class="hbtn" id="filterBtn" title="Nach Tags filtern" aria-label="Nach Tags filtern"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg><span class="badge-n" id="filterCount" hidden></span></button>
+    <div class="hbtn" title="Sortieren"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/></svg>
+      <select id="sort" aria-label="Sortieren">
+        <option value="due">Nach Fälligkeit</option>
+        <option value="prio">Nach Priorität</option>
+        <option value="name">Nach Name</option>
+        <option value="created">Nach Erstellung</option>
+      </select>
+    </div>
+    <button type="button" class="hbtn" id="settingsBtn" title="Einstellungen" aria-label="Einstellungen"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg></button>
   </div>
 </header>
 
 <div class="wrap">
-  <div class="toolbar">
-    <div class="search">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-      <input id="search" type="text" placeholder="Aufgaben durchsuchen…">
-    </div>
-    <select id="sort" class="ctrl">
-      <option value="due">Sortieren: Fälligkeit</option>
-      <option value="prio">Sortieren: Priorität</option>
-      <option value="name">Sortieren: Name</option>
-      <option value="created">Sortieren: Erstellt</option>
-    </select>
-    <button id="settingsBtn" class="ctrl">⚙️ Einstellungen</button>
-    <input type="file" id="importFile" accept="application/json,.json,text/plain,.txt" style="display:none">
+  <input type="file" id="importFile" accept="application/json,.json,text/plain,.txt" style="display:none">
+  <div class="panel searchrow" id="searchPanel" hidden>
+    <input id="search" type="search" placeholder="Aufgaben durchsuchen…" enterkeyhint="search">
+    <button type="button" class="iconbtn" id="searchClose" aria-label="Suche schließen">✕</button>
   </div>
-
-  <div class="filters" id="filters"></div>
+  <div class="panel filters" id="filters" hidden></div>
 
   <div class="tabs" role="tablist">
     <button type="button" class="tab active" role="tab" aria-selected="true" id="tabActive">Offen<span class="cnt" id="cntActive"></span></button>
@@ -776,7 +783,7 @@ let activeFilters = { tags:new Set((ui.tags||[]).filter(t=>data.tags.includes(t)
 let pendingImport = null;
 function loadUi(){ try{ return JSON.parse(localStorage.getItem(LS_UI))||{}; }catch(e){ return {}; } }
 function saveUi(){
-  try{ localStorage.setItem(LS_UI, JSON.stringify({ view, sortBy, filtersOpen:!!ui.filtersOpen,
+  try{ localStorage.setItem(LS_UI, JSON.stringify({ view, sortBy,
     tags:[...activeFilters.tags] })); }catch(e){}
 }
 
@@ -1021,26 +1028,23 @@ async function nativeCleanupBackups(){
 }
 
 /* ---------- Rendering ---------- */
-const FILTER_CHIP_LIMIT = 8;
 function renderFilters(){
   const f = $('filters'); f.innerHTML='';
-  const chips = data.tags.map(t=>({ kind:'tags', v:t, label:'#'+t, dot:'var(--c-violet)' }));
-  const many = chips.length > FILTER_CHIP_LIMIT;
-  // Bei vielen Chips: eingeklappt nur die ersten plus alle aktiven zeigen
-  const shown = many && !ui.filtersOpen ? chips.filter((c,i)=>i<FILTER_CHIP_LIMIT || activeFilters[c.kind].has(c.v)) : chips;
   const addChip = (cls, html, onclick, pressed)=>{
     const b=document.createElement('button'); b.type='button'; b.className='chip'+cls; b.innerHTML=html; b.onclick=onclick;
     if(pressed!==undefined) b.setAttribute('aria-pressed', pressed);
     f.appendChild(b);
   };
-  shown.forEach(c=>{
-    const on=activeFilters[c.kind].has(c.v);
-    addChip(on?' active':'', `<span class="dot" style="background:${c.dot}"></span>${escapeHtml(c.label)}`,
-      ()=>{ toggleSet(activeFilters[c.kind], c.v); saveUi(); renderFilters(); render(); }, on);
+  data.tags.forEach(t=>{
+    const on=activeFilters.tags.has(t);
+    addChip(on?' active':'', `<span class="dot" style="background:var(--c-violet)"></span>#${escapeHtml(t)}`,
+      ()=>{ toggleSet(activeFilters.tags, t); saveUi(); renderFilters(); render(); }, on);
   });
-  if(many) addChip(' more', ui.filtersOpen ? 'weniger' : `+${chips.length-shown.length} weitere`,
-    ()=>{ ui.filtersOpen=!ui.filtersOpen; saveUi(); renderFilters(); });
+  if(!data.tags.length) f.innerHTML='<span class="hint">Noch keine Tags – z. B. #einkaufen in der Schnelleingabe.</span>';
   if(activeFilters.tags.size) addChip(' reset', '✕ Filter zurücksetzen', resetFilters);
+  const n=activeFilters.tags.size;
+  $('filterCount').hidden=!n; $('filterCount').textContent=n;
+  $('filterBtn').classList.toggle('active', !!n);
 }
 function resetFilters(){ activeFilters.tags.clear(); saveUi(); renderFilters(); render(); }
 function toggleSet(set,v){ set.has(v)?set.delete(v):set.add(v); }
@@ -2012,6 +2016,14 @@ $('clearRegistry').onclick = ()=>{
   setRegistry(kept); renderCleanup(); toast('Aufräum-Liste zurückgesetzt.');
 };
 $('search').oninput = e=>{ searchTerm=e.target.value; render(); };
+function togglePanel(id, btn, show){
+  const el=$(id); show = show ?? el.hidden;
+  el.hidden=!show; $(btn).classList.toggle('on', show);
+  return show;
+}
+$('searchBtn').onclick = ()=>{ if(togglePanel('searchPanel','searchBtn')) $('search').focus(); };
+$('searchClose').onclick = ()=>{ $('search').value=''; searchTerm=''; togglePanel('searchPanel','searchBtn', false); render(); };
+$('filterBtn').onclick = ()=>togglePanel('filters','filterBtn');
 $('sort').onchange = e=>{ sortBy=e.target.value; saveUi(); render(); };
 $('quickAdd').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); submitQuickAdd(); } });
 $('quickAddBtn').onclick = ()=>{ submitQuickAdd(); $('quickAdd').focus(); };

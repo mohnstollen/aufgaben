@@ -1,5 +1,5 @@
 /* Service Worker – Aufgabenverwaltung PWA */
-const CACHE = 'aufgaben-v18';
+const CACHE = 'aufgaben-v19';
 const ASSETS = [
   './','./index.html','./manifest.webmanifest',
   './icons/icon-192.png','./icons/icon-512.png','./icons/icon-maskable-512.png',

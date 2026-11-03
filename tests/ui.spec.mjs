@@ -73,7 +73,10 @@ test('Antippen öffnet Bearbeiten: Notiz und Tags', async ({ browser }) => {
   await page.click('#saveTask');
   const t = await page.evaluate(() => data.tasks.find(x => x.id === 'w1'));
   expect(t).toMatchObject({ note: 'Benzin kaufen', tags: ['haus', 'einkaufen'] });
+  await page.click('#filterBtn');
   await expect(page.locator('.chip:has-text("#einkaufen")')).toBeVisible();     // neuer Tag erscheint als Filter
+  await page.click('#searchBtn');
+  await expect(page.locator('#search')).toBeFocused();
   await page.fill('#search', 'benzin');
   expect(await taskNames(page)).toEqual(['Rasen mähen']);
 });
@@ -113,14 +116,20 @@ test('Wischen: nach rechts erledigt, nach links gelöscht', async ({ browser }) 
 
 test('Ansicht und Filter bleiben nach Neuladen erhalten', async ({ browser }) => {
   const { page } = await open(browser);
+  await expect(page.locator('#filters')).toBeHidden();                       // Tags stecken hinter dem Filter-Symbol
+  await page.click('#filterBtn');
   await page.click('.chip:has-text("#haus")');
+  await expect(page.locator('#filterCount')).toHaveText('1');
   expect(await taskNames(page)).toEqual(['Zahnarzt anrufen', 'Rasen mähen']);
   await page.selectOption('#sort', 'prio');
   await page.reload();
+  await expect(page.locator('#filterCount')).toHaveText('1');               // aktiver Filter bleibt am Symbol sichtbar
+  await page.click('#filterBtn');
   await expect(page.locator('.chip.active')).toHaveText(['#haus']);
   await expect(page.locator('#sort')).toHaveValue('prio');
   await page.click('.chip.reset');
   await expect(page.locator('.chip.active')).toHaveCount(0);
+  await expect(page.locator('#filterCount')).toBeHidden();
   expect((await taskNames(page)).length).toBe(5);
 });
 
@@ -322,4 +331,21 @@ test.describe('Verknüpfung und Teilen (installierte Web-App)', () => {
     await page.press('#quickAdd', 'Enter');
     expect(await page.evaluate(() => data.tasks.find(t => t.name.startsWith('Artikel'))?.quick)).toBe(true);
   });
+});
+
+test('Suche: Lupe öffnet das Suchfeld, ✕ schließt und setzt zurück', async ({ browser }) => {
+  const { page } = await open(browser);
+  await expect(page.locator('#searchPanel')).toBeHidden();
+  await page.click('#searchBtn');
+  await page.fill('#search', 'rasen');
+  expect(await taskNames(page)).toEqual(['Rasen mähen']);
+  await page.click('#searchClose');
+  await expect(page.locator('#searchPanel')).toBeHidden();
+  expect((await taskNames(page)).length).toBe(5);
+});
+
+test('Kompakte Kopfzeile: erste Aufgabe beginnt im oberen Drittel', async ({ browser }) => {
+  const { page } = await open(browser);
+  const top = await page.locator('.task').first().evaluate(e => e.getBoundingClientRect().top);
+  expect(top).toBeLessThan(844 / 3);
 });

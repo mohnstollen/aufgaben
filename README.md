@@ -156,6 +156,8 @@ Der Ordner `tests/` enthält Playwright-Tests für die wichtigsten Abläufe:
   zwei Geräte, Löschen, Konflikte (412), komprimierte/fehlende ETags, gesperrte Dateien (423)
 - **Android-App** mit nachgebildeten Capacitor-Plugins: natives WebDAV, Zurück-Taste,
   Backups, Teilen, Update-Prüfung
+- **Anmeldung**: Login Flow v2, Anmelde-QR-Code – der Scan läuft Ende-zu-Ende über eine
+  simulierte Kamera, die ein Bild mit QR-Code liefert
 - **Bedienung**: Gruppierung, Schnelleingabe, Bearbeiten, Rückgängig, Wischen, Filter, Design
 
 In GitHub Actions laufen sie bei jedem Pull Request und vor jedem APK-Build und Pages-Deploy
@@ -210,9 +212,19 @@ zusammen und lädt das Ergebnis wieder hoch.
    `Access-Control-Expose-Headers: ETag`).
 
 ### In der App
-**⚙️ Einstellungen → ☁️ Nextcloud-Sync einrichten**: Adresse, Benutzername, App-Passwort und
-Dateipfad eintragen, **Verbindung testen**, dann **Speichern & synchronisieren**. Auf allen
-Geräten denselben Dateipfad verwenden.
+**⚙️ Einstellungen → ☁️ Nextcloud-Sync einrichten**, dann einer von drei Wegen:
+- **🔐 Mit Nextcloud anmelden** (am einfachsten): Adresse eintragen, antippen, im Browser bei
+  Nextcloud anmelden und „Zugriff gewähren“. Die App bekommt automatisch ein eigenes
+  App-Passwort und speichert alles. In der Android-App klappt das immer; im Browser nur, wenn
+  die Nextcloud die Anmeldung von fremden Webseiten zulässt (sonst kommt ein Hinweis).
+- **📷 QR-Code**: In Nextcloud unter Persönliche Einstellungen → Sicherheit ein App-Passwort
+  erstellen, „QR-Code anzeigen“ und mit dem Handy scannen. Alternativ den Text des QR-Codes
+  (`nc://login/…`) ins Adressfeld einfügen.
+- **Von Hand**: Benutzername und App-Passwort eintragen, **Verbindung testen**, dann
+  **Speichern & synchronisieren**.
+
+Auf allen Geräten denselben Dateipfad verwenden. Tipp: Für die Aufgaben ein normales
+Benutzerkonto nehmen, nicht das Admin-Konto.
 
 - Synchronisiert wird beim Start, beim Zurückkehren in die App, kurz nach jeder Änderung,
   alle 5 Minuten und per Tipp auf den Status oben rechts.

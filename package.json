@@ -12,12 +12,15 @@
   "dependencies": {
     "@capacitor/android": "8.5.3",
     "@capacitor/app": "8.1.2",
+    "@capacitor/browser": "8.0.5",
     "@capacitor/core": "8.5.3",
     "@capacitor/filesystem": "8.1.5",
     "@capacitor/share": "8.0.3"
   },
   "devDependencies": {
     "@capacitor/cli": "8.5.3",
-    "@playwright/test": "1.63.0"
+    "@playwright/test": "1.63.0",
+    "jsqr": "1.4.0",
+    "qrcode": "1.5.4"
   }
 }

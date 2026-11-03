@@ -272,6 +272,12 @@
   .sync-pill.err{color:var(--c-red); border-color:var(--c-red)}
   .sync-pill.off, .sync-pill.locked{color:var(--c-amber)}
   .native .web-only{display:none}
+  .login-row{display:flex; gap:8px; margin-top:10px}
+  .login-row .btn{flex:1; justify-content:center; display:flex; align-items:center; gap:6px}
+  #qrOverlay{z-index:45}   /* liegt über dem Sync-Dialog, aus dem er geöffnet wird */
+  #qrVideo{width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:12px; background:#000; display:block}
+  .or-sep{display:flex; align-items:center; gap:10px; color:var(--muted); font-size:12px; margin:4px 0 12px}
+  .or-sep::before,.or-sep::after{content:""; flex:1; height:1px; background:var(--border)}
   .modal code{background:var(--surface2); padding:1px 6px; border-radius:5px; color:var(--c-violet)}
 </style>
 </head>
@@ -392,6 +398,19 @@
     </div>
     <div class="modal-actions">
       <button class="btn ghost" id="ppCancel">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+<!-- QR-Scanner -->
+<div class="overlay" id="qrOverlay">
+  <div class="modal">
+    <h2>📷 QR-Code scannen</h2>
+    <video id="qrVideo" playsinline muted></video>
+    <p class="hint" id="qrHint" style="font-size:13px; margin:10px 0 0"></p>
+    <p class="hint" style="font-size:12px">In Nextcloud: Persönliche Einstellungen → Sicherheit → „Neues App-Passwort erstellen“ → „QR-Code anzeigen“.</p>
+    <div class="modal-actions">
+      <button class="btn ghost" id="qrCancel">Abbrechen</button>
     </div>
   </div>
 </div>
@@ -572,7 +591,14 @@
       <label>Nextcloud-Adresse</label>
       <input type="url" id="syncUrl" placeholder="https://cloud.example.de" autocomplete="off" autocapitalize="off">
       <div class="hint">Die Adresse Deiner Nextcloud. Die vollständige WebDAV-Adresse (…/remote.php/dav/files/NAME) funktioniert auch.</div>
+      <div class="login-row">
+        <button type="button" class="btn primary" id="ncLoginBtn">🔐 Mit Nextcloud anmelden</button>
+        <button type="button" class="btn ghost" id="qrScanBtn">📷 QR-Code</button>
+      </div>
+      <div class="hint">Anmelden öffnet Deine Nextcloud im Browser – nach „Zugriff gewähren“ übernimmt die App Benutzer und App-Passwort automatisch.
+        Alternativ den QR-Code eines App-Passworts scannen.</div>
     </div>
+    <div class="or-sep">oder von Hand</div>
     <div class="row2">
       <div class="field">
         <label>Benutzername</label>
@@ -604,7 +630,7 @@
     <details class="field hint" style="font-size:12px">
       <summary style="cursor:pointer">Einrichtung in der Nextcloud (einmalig)</summary>
       <ol style="padding-left:18px; line-height:1.55">
-        <li><b>App-Passwort</b> anlegen: Persönliche Einstellungen → Sicherheit → „Neues App-Passwort erstellen". Nicht das normale Passwort verwenden.</li>
+        <li>Am einfachsten „Mit Nextcloud anmelden“. Von Hand: <b>App-Passwort</b> anlegen unter Persönliche Einstellungen → Sicherheit → „Neues App-Passwort erstellen" (dort gibt es auch den QR-Code). Nicht das normale Passwort verwenden.</li>
         <li class="web-only">Als Admin die Nextcloud-App <b>„WebAppPassword"</b> installieren. Nextcloud erlaubt WebDAV-Zugriffe von anderen Webseiten sonst nicht (CORS).</li>
         <li class="web-only">In den Einstellungen von WebAppPassword unter den erlaubten WebDAV-Origins eintragen: <code id="syncOrigin"></code></li>
       </ol>
@@ -1525,7 +1551,8 @@ function updateSyncCfg(patch){ const c=getSyncCfg(); if(c) setSyncCfg(Object.ass
 function davBase(cfg){
   let base=cfg.url.trim().replace(/\/+$/,'');
   if(!/^https?:\/\//i.test(base)) base='https://'+base;
-  if(!/\/remote\.php\//.test(base)) base+='/remote.php/dav/files/'+encodeURIComponent(cfg.user);
+  // Der WebDAV-Pfad braucht die Benutzer-ID – der Login-Name kann davon abweichen (z. B. E-Mail-Adresse)
+  if(!/\/remote\.php\//.test(base)) base+='/remote.php/dav/files/'+encodeURIComponent(cfg.davUser||cfg.user);
   return base;
 }
 function davSegments(path){ return String(path||'').split('/').map(s=>s.trim()).filter(Boolean); }
@@ -1682,6 +1709,7 @@ function openSync(){
   $('syncUrl').value=cfg.url||''; $('syncUser').value=cfg.user||''; $('syncPass').value=cfg.pass||'';
   $('syncPath').value=cfg.path||SYNC_DEFAULT_PATH;
   $('syncAuto').checked=cfg.auto!==false; $('syncTodoTxt').checked=!!cfg.todoTxt;
+  delete $('syncUser').dataset.davFor; delete $('syncUser').dataset.davUser;
   $('syncOrigin').textContent=location.origin;
   $('syncDisconnect').style.display=syncConfigured(cfg)?'':'none';
   renderSyncInfo();
@@ -1703,6 +1731,9 @@ function readSyncForm(){
     path:davSegments($('syncPath').value.trim()||SYNC_DEFAULT_PATH).join('/'),
     auto:$('syncAuto').checked, todoTxt:$('syncTodoTxt').checked });
   if(cfg.path!==prev.path || cfg.url!==prev.url || cfg.user!==prev.user) delete cfg.lastTodoTxt;
+  const ds=$('syncUser').dataset;
+  if(ds.davFor===cfg.user && ds.davUser) cfg.davUser=ds.davUser;
+  else if(prev.user!==cfg.user) delete cfg.davUser;
   if(!cfg.url || !cfg.user || !cfg.pass){ renderSyncInfo('<span style="color:#ff9aa4">Bitte Adresse, Benutzername und App-Passwort angeben.</span>'); return null; }
   if(!IS_NATIVE && location.protocol==='https:' && /^http:\/\//i.test(cfg.url)){
     renderSyncInfo('<span style="color:#ff9aa4">Unverschlüsselte http://-Adressen blockiert der Browser auf dieser HTTPS-Seite. Bitte https:// verwenden.</span>'); return null;
@@ -1733,6 +1764,139 @@ function disconnectSync(){
   if(!confirm('Nextcloud-Sync auf diesem Gerät trennen? Die Aufgaben bleiben lokal erhalten, die Datei in der Nextcloud bleibt unberührt.')) return;
   clearTimeout(syncState.timer); setSyncCfg(null); setSyncStatus(); closeSync();
   toast('Sync getrennt.');
+}
+
+/* ---------- Nextcloud-Anmeldung: Login Flow v2 und QR-Code ----------
+   Login Flow v2: Die App fordert ein Anmelde-Token an, öffnet die Anmeldeseite im Browser und fragt
+   so lange nach, bis der Benutzer „Zugriff gewähren“ geklickt hat. Dann liefert Nextcloud Server,
+   Login-Name und ein frisches App-Passwort. Der QR-Code eines App-Passworts enthält dieselben Angaben:
+   nc://login/server:<adresse>&user:<login>&password:<app-passwort>  (Werte URL-kodiert) */
+const sleep = ms => new Promise(r=>setTimeout(r, ms));
+const errHtml = msg => `<span style="color:var(--c-red)">⚠️ ${escapeHtml(msg)}</span>`;
+function normServer(u){
+  let b=String(u||'').trim().replace(/\/+$/,''); if(!b) return '';
+  if(!/^https?:\/\//i.test(b)) b='https://'+b;
+  return b.replace(/\/remote\.php(\/.*)?$/i,'').replace(/\/index\.php$/i,'');
+}
+function ncRequest(url, { method='GET', body, headers={} }={}){
+  return IS_NATIVE ? nativeFetch(url, { method, body, headers }) : fetch(url, { method, body, headers, cache:'no-store', credentials:'omit' });
+}
+function parseNcLogin(text){
+  const m=String(text||'').trim().match(/^nc:\/\/login\/(.+)$/i); if(!m) return null;
+  const o={};
+  m[1].split('&').forEach(part=>{
+    const i=part.indexOf(':'); if(i<0) return;
+    const v=part.slice(i+1);
+    try{ o[part.slice(0,i).toLowerCase()]=decodeURIComponent(v.replace(/\+/g,' ')); }catch(_){ o[part.slice(0,i).toLowerCase()]=v; }
+  });
+  return o.server && o.user && o.password ? { server:o.server, user:o.user, pass:o.password } : null;
+}
+/* Zugangsdaten eintragen, Benutzer-ID für den WebDAV-Pfad ermitteln, speichern & synchronisieren */
+async function applyNcCredentials({ server, user, pass }){
+  const base=normServer(server);
+  $('syncUrl').value=base; $('syncUser').value=user; $('syncPass').value=pass;
+  renderSyncInfo(`✔ Angemeldet als <b>${escapeHtml(user)}</b> – wird gespeichert …`);
+  try{
+    const r=await ncRequest(base+'/ocs/v2.php/cloud/user?format=json', { headers:{ 'Authorization':'Basic '+b64(user+':'+pass), 'OCS-APIRequest':'true', 'Accept':'application/json' } });
+    const id = r.ok ? JSON.parse(await r.text())?.ocs?.data?.id : null;
+    if(id && id!==user){ $('syncUser').dataset.davFor=user; $('syncUser').dataset.davUser=id; }
+  }catch(_){ /* ohne Benutzer-ID wird der Login-Name verwendet */ }
+  saveSync();
+}
+const loginState = { active:false, polling:false };
+async function startNcLogin(){
+  const server=normServer($('syncUrl').value);
+  if(!server){ renderSyncInfo(errHtml('Bitte zuerst die Adresse Deiner Nextcloud eintragen.')); $('syncUrl').focus(); return; }
+  // Im Browser das Fenster sofort öffnen, sonst blockiert der Popup-Blocker es nach dem await
+  const win = IS_NATIVE ? null : window.open('about:blank', '_blank');
+  renderSyncInfo('⟳ Verbinde mit Nextcloud …');
+  let init;
+  try{
+    const r=await ncRequest(server+'/index.php/login/v2', { method:'POST', headers: IS_NATIVE ? { 'User-Agent':'Aufgaben-App (Android)' } : {} });
+    if(!r.ok) throw new Error(`Nextcloud antwortet mit Fehler ${r.status}`);
+    init=JSON.parse(await r.text());
+    if(!init?.poll?.token || !init?.login) throw new Error('Unerwartete Antwort – ist die Adresse richtig?');
+  }catch(e){
+    if(win) win.close();
+    renderSyncInfo(errHtml(IS_NATIVE || !(e instanceof TypeError) ? e.message
+      : 'Die Anmeldung aus dem Browser lässt Deine Nextcloud nicht zu (CORS). Bitte Benutzer und App-Passwort von Hand eintragen – oder in der Android-App anmelden bzw. den QR-Code scannen.'));
+    return;
+  }
+  Object.assign(loginState, { active:true, token:init.poll.token, endpoint:init.poll.endpoint, until:Date.now()+20*60000 });
+  renderSyncInfo('🔐 Bitte im Browser bei Nextcloud anmelden und <b>„Zugriff gewähren“</b>. Danach geht es hier automatisch weiter … <button type="button" class="btn ghost" id="loginCancel" style="padding:4px 10px; margin-left:6px">Abbrechen</button>');
+  $('loginCancel').onclick=()=>{ loginState.active=false; renderSyncInfo(); };
+  if(IS_NATIVE){ if(Native.Browser) Native.Browser.open({ url:init.login }).catch(()=>{ location.href=init.login; }); else location.href=init.login; }
+  else if(win){ win.opener=null; win.location.href=init.login; }
+  else window.open(init.login, '_blank');
+  pollNcLogin();
+}
+async function pollNcLogin(){
+  if(!loginState.active || loginState.polling) return;
+  loginState.polling=true;
+  try{
+    while(loginState.active && Date.now()<loginState.until){
+      const r=await ncRequest(loginState.endpoint, { method:'POST', body:'token='+encodeURIComponent(loginState.token),
+        headers:{ 'Content-Type':'application/x-www-form-urlencoded' } }).catch(()=>null);
+      if(r && r.status===200){
+        const d=JSON.parse(await r.text());
+        loginState.active=false;
+        if(IS_NATIVE && Native.Browser) Native.Browser.close().catch(()=>{});
+        await applyNcCredentials({ server:d.server, user:d.loginName, pass:d.appPassword });
+        return;
+      }
+      await sleep(2000);
+    }
+    if(loginState.active){ loginState.active=false; renderSyncInfo(errHtml('Anmeldung abgelaufen – bitte erneut versuchen.')); }
+  }finally{ loginState.polling=false; }
+}
+
+let qrStream=null, qrDetect=null;
+const scriptLoads={};
+function loadScript(src){
+  return scriptLoads[src] ||= new Promise((ok, fail)=>{ const el=document.createElement('script'); el.src=src; el.onload=ok; el.onerror=()=>fail(new Error(src+' nicht geladen')); document.head.appendChild(el); });
+}
+async function getQrDetector(){
+  if(qrDetect) return qrDetect;
+  if('BarcodeDetector' in window){
+    try{
+      if((await BarcodeDetector.getSupportedFormats()).includes('qr_code')){
+        const bd=new BarcodeDetector({ formats:['qr_code'] });
+        return qrDetect = async v=>(await bd.detect(v))[0]?.rawValue || null;
+      }
+    }catch(_){}
+  }
+  await loadScript('vendor/jsQR.js');                                     // Fallback ohne Google-Dienste
+  const canvas=document.createElement('canvas'), ctx=canvas.getContext('2d', { willReadFrequently:true });
+  return qrDetect = async v=>{
+    const w=Math.min(v.videoWidth, 800), h=Math.round(v.videoHeight*w/v.videoWidth);
+    canvas.width=w; canvas.height=h; ctx.drawImage(v, 0, 0, w, h);
+    return window.jsQR(ctx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts:'attemptBoth' })?.data || null;
+  };
+}
+function stopQr(){ if(qrStream){ qrStream.getTracks().forEach(t=>t.stop()); qrStream=null; } $('qrVideo').srcObject=null; }
+async function startQrScan(){
+  const hint=$('qrHint');
+  $('qrOverlay').classList.add('show');
+  if(!navigator.mediaDevices?.getUserMedia){ hint.textContent='Dieses Gerät bzw. dieser Browser erlaubt keinen Kamerazugriff.'; return; }
+  hint.textContent='Kamera wird gestartet …';
+  try{ qrStream=await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' }, audio:false }); }
+  catch(e){ hint.textContent='Kein Zugriff auf die Kamera ('+(e.name==='NotAllowedError'?'nicht erlaubt':e.message||e.name)+').'; return; }
+  if(!$('qrOverlay').classList.contains('show')){ stopQr(); return; }
+  const video=$('qrVideo'); video.srcObject=qrStream; await video.play().catch(()=>{});
+  hint.textContent='Kamera auf den QR-Code halten …';
+  let detect;
+  try{ detect=await getQrDetector(); }catch(e){ hint.textContent=e.message; return; }
+  const tick=async()=>{
+    if(!$('qrOverlay').classList.contains('show') || !qrStream){ stopQr(); return; }   // geschlossen (auch per Zurück)
+    if(video.readyState>=2 && video.videoWidth){
+      const text=await detect(video).catch(()=>null);
+      const cred=text && parseNcLogin(text);
+      if(cred){ stopQr(); $('qrOverlay').classList.remove('show'); applyNcCredentials(cred); return; }
+      if(text) hint.textContent='Das ist kein Nextcloud-Anmelde-QR-Code.';
+    }
+    setTimeout(tick, 150);
+  };
+  tick();
 }
 
 /* ---------- App-Updates (nur Android-App) ----------
@@ -1850,6 +2014,11 @@ $('fName').addEventListener('keydown',e=>{ if(e.key==='Enter') saveTask(); });
 $('settingsBtn').addEventListener('click', ()=>{ $('themeSel').value=themePref(); });
 $('syncSetupBtn').onclick = ()=>{ closeSettings(); openSync(); };
 $('syncSave').onclick = saveSync;
+$('ncLoginBtn').onclick = startNcLogin;
+$('qrScanBtn').onclick = startQrScan;
+$('qrCancel').onclick = ()=>$('qrOverlay').classList.remove('show');
+// Text eines Anmelde-QR-Codes (nc://login/…) ins Adressfeld eingefügt → direkt übernehmen
+$('syncUrl').addEventListener('input', e=>{ const c=parseNcLogin(e.target.value); if(c) applyNcCredentials(c); });
 $('syncTest').onclick = testSync;
 $('syncDisconnect').onclick = disconnectSync;
 $('syncStatus').onclick = ()=>syncNow({ manual:true });
@@ -1860,10 +2029,10 @@ $('ppCancel').onclick = closePostpone;
 $('ppDate').onchange = e=>{ if(e.target.value){ closePostpone(); postpone(postponeIds, e.target.value); } };
 $('dueQuick').onclick = e=>{ const b=e.target.closest('button'); if(b) $('fDue').value = b.dataset.d==='' ? '' : addDays(+b.dataset.d); };
 
-[ 'taskOverlay','settingsOverlay','manageOverlay','importOverlay','backupOverlay','syncOverlay','postponeOverlay' ].forEach(id=>{
+[ 'taskOverlay','settingsOverlay','manageOverlay','importOverlay','backupOverlay','syncOverlay','postponeOverlay','qrOverlay' ].forEach(id=>{
   $(id).addEventListener('click',e=>{ if(e.target.id===id){ $(id).classList.remove('show'); } });
 });
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeTask(); closeSettings(); closeManage(); $('importOverlay').classList.remove('show'); closeBackups(); closeSync(); closePostpone(); } });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeTask(); closeSettings(); closeManage(); $('importOverlay').classList.remove('show'); closeBackups(); closeSync(); closePostpone(); $('qrOverlay').classList.remove('show'); } });
 
 function switchView(v){
   view=v; saveUi();
@@ -1886,7 +2055,7 @@ function applyTheme(){
 if(darkMq && darkMq.addEventListener) darkMq.addEventListener('change', ()=>{ if(themePref()==='auto') applyTheme(); });
 
 /* ---------- Android-App ---------- */
-const OVERLAYS = [ 'postponeOverlay','importOverlay','syncOverlay','manageOverlay','backupOverlay','taskOverlay','settingsOverlay' ];
+const OVERLAYS = [ 'qrOverlay','postponeOverlay','importOverlay','syncOverlay','manageOverlay','backupOverlay','taskOverlay','settingsOverlay' ];
 if(IS_NATIVE){
   document.querySelectorAll('.native-only').forEach(el=>el.style.display='');
   $('autoDlLabel').textContent='Tägliches Backup automatisch unter Dokumente/Aufgaben';
@@ -1895,7 +2064,7 @@ if(IS_NATIVE){
     const open=OVERLAYS.find(id=>$(id).classList.contains('show'));
     if(open) $(open).classList.remove('show'); else Native.App.minimizeApp();
   });
-  Native.App.addListener('appStateChange', ({ isActive })=>{ if(isActive){ scheduleSync(300); scheduleAutoDownload(); checkUpdate(); } });
+  Native.App.addListener('appStateChange', ({ isActive })=>{ if(isActive){ scheduleSync(300); scheduleAutoDownload(); checkUpdate(); pollNcLogin(); } });
   $('updateBtn').onclick = ()=>{ availableUpdate() ? downloadUpdate() : checkUpdate(true); };
   Native.App.getInfo().then(info=>{ appVersion=info.version||''; renderUpdate(); setTimeout(()=>checkUpdate(), 3000); }).catch(()=>{});
 }

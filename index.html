@@ -596,7 +596,9 @@
         <button type="button" class="btn ghost" id="qrScanBtn">📷 QR-Code</button>
       </div>
       <div class="hint">Anmelden öffnet Deine Nextcloud im Browser – nach „Zugriff gewähren“ übernimmt die App Benutzer und App-Passwort automatisch.
-        Alternativ den QR-Code eines App-Passworts scannen.</div>
+        Alternativ den QR-Code eines App-Passworts scannen.
+        <span class="web-only"><br>Im Browser lässt Nextcloud diese Anmeldung meist nicht zu (auch nicht mit „WebAppPassword“) –
+        dann einfach unten Benutzer und App-Passwort eintragen.</span></div>
     </div>
     <div class="or-sep">oder von Hand</div>
     <div class="row2">
@@ -1818,8 +1820,12 @@ async function startNcLogin(){
     if(!init?.poll?.token || !init?.login) throw new Error('Unerwartete Antwort – ist die Adresse richtig?');
   }catch(e){
     if(win) win.close();
-    renderSyncInfo(errHtml(IS_NATIVE || !(e instanceof TypeError) ? e.message
-      : 'Die Anmeldung aus dem Browser lässt Deine Nextcloud nicht zu (CORS). Bitte Benutzer und App-Passwort von Hand eintragen – oder in der Android-App anmelden bzw. den QR-Code scannen.'));
+    const cors = !IS_NATIVE && e instanceof TypeError;
+    renderSyncInfo(errHtml(cors
+      ? 'Die Anmeldung aus dem Browser lässt Deine Nextcloud nicht zu. Bitte oben Benutzer und App-Passwort von Hand eintragen: '
+        + 'Nextcloud → Persönliche Einstellungen → Sicherheit → „Neues App-Passwort erstellen“.'
+      : e.message));
+    if(cors) $('syncUser').focus();
     return;
   }
   Object.assign(loginState, { active:true, token:init.poll.token, endpoint:init.poll.endpoint, until:Date.now()+20*60000 });

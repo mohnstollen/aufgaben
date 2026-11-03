@@ -215,8 +215,9 @@ zusammen und lädt das Ergebnis wieder hoch.
 **⚙️ Einstellungen → ☁️ Nextcloud-Sync einrichten**, dann einer von drei Wegen:
 - **🔐 Mit Nextcloud anmelden** (am einfachsten): Adresse eintragen, antippen, im Browser bei
   Nextcloud anmelden und „Zugriff gewähren“. Die App bekommt automatisch ein eigenes
-  App-Passwort und speichert alles. In der Android-App klappt das immer; im Browser nur, wenn
-  die Nextcloud die Anmeldung von fremden Webseiten zulässt (sonst kommt ein Hinweis).
+  App-Passwort und speichert alles. Das funktioniert in der **Android-App**. Im Browser blockiert
+  Nextcloud diese Anmeldung in der Regel – „WebAppPassword“ gibt nur WebDAV frei, nicht die
+  Anmeldeseite (geprüft mit Hetzner Storage Share). Dort also den Weg „von Hand“ nehmen.
 - **📷 QR-Code**: In Nextcloud unter Persönliche Einstellungen → Sicherheit ein App-Passwort
   erstellen, „QR-Code anzeigen“ und mit dem Handy scannen. Alternativ den Text des QR-Codes
   (`nc://login/…`) ins Adressfeld einfügen.

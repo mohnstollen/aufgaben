@@ -70,5 +70,6 @@ function nativeMock({ version = '1.1.0', files = {} } = {}) {
     App: { addListener: (ev, cb) => { listeners[ev] = cb; }, minimizeApp: async () => { log.push('minimize'); },
       getInfo: async () => ({ version }) },
     SystemBars: { setStyle: async o => { log.push(`bars ${o.style}`); } },
+    Browser: { open: async o => { log.push(`browser ${o.url}`); }, close: async () => { throw new Error('nur iOS'); } },
   } };
 }

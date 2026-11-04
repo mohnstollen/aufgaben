@@ -71,7 +71,9 @@
   .head-inner h1{flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-left:4px}
   .hbtn{position:relative; width:40px; height:40px; border-radius:10px; border:none; background:none; color:var(--muted);
     display:grid; place-items:center; cursor:pointer; flex-shrink:0}
-  .hbtn:hover,.hbtn.on{background:var(--surface2); color:var(--text)}
+  .hbtn.on{background:var(--surface2); color:var(--text)}
+  /* Hover-Effekte nur mit Maus – auf Touchscreens bleiben sie sonst nach dem Antippen „hängen“ */
+  @media (hover:hover){ .hbtn:hover{background:var(--surface2); color:var(--text)} }
   .hbtn.active{color:var(--accent)}
   .hbtn .badge-n{position:absolute; top:4px; right:3px; min-width:16px; height:16px; border-radius:8px; padding:0 4px;
     background:var(--accent); color:#fff; font-size:10.5px; font-weight:700; line-height:16px; text-align:center}
@@ -87,7 +89,7 @@
     padding:10px 12px; border-radius:10px; border:1px solid var(--border);
     background:var(--surface); color:var(--text); font-size:13px; cursor:pointer;
   }
-  .ctrl:hover{border-color:var(--accent)}
+  @media (hover:hover){ .ctrl:hover{border-color:var(--accent)} }
 
   .filters{display:flex; flex-wrap:wrap; gap:8px}
   .chip{
@@ -95,7 +97,7 @@
     background:var(--surface); font-size:12.5px; cursor:pointer; color:var(--muted);
     display:inline-flex; align-items:center; gap:6px; transition:.15s;
   }
-  .chip:hover{border-color:var(--accent)}
+  @media (hover:hover){ .chip:hover{border-color:var(--accent)} }
   .chip.active{background:var(--accent); border-color:var(--accent); color:#fff}
   .chip .dot{width:8px; height:8px; border-radius:50%}
   .chip.more{border-style:dashed}
@@ -155,7 +157,7 @@
     padding:10px 10px 10px 12px; display:flex; gap:10px; align-items:flex-start;
     border-left:4px solid var(--border); transition:.15s;
   }
-  .task:hover{border-color:var(--accent); border-left-color:var(--accent)}
+  @media (hover:hover){ .task:hover{border-color:var(--accent); border-left-color:var(--accent)} }
   .task.prio-Hoch{border-left-color:var(--prio-high)}
   .task.prio-Mittel{border-left-color:var(--prio-mid)}
   .task.prio-Niedrig{border-left-color:var(--prio-low)}
@@ -166,7 +168,7 @@
     cursor:pointer; flex-shrink:0; margin:4px 4px 0 2px; display:grid; place-items:center; transition:.15s;
   }
   .check::after{content:""; position:absolute; inset:-12px}   /* größere Tippfläche */
-  .check:hover{border-color:var(--green)}
+  @media (hover:hover){ .check:hover{border-color:var(--green)} }
   .check.on{background:var(--green); border-color:var(--green)}
   .check.on svg{display:block}
   .check svg{display:none}
@@ -188,7 +190,7 @@
     background:transparent; border:none; color:var(--muted); cursor:pointer;
     min-width:40px; min-height:40px; padding:8px; border-radius:10px; display:grid; place-items:center; font-size:15px;
   }
-  .iconbtn:hover{background:var(--surface2); color:var(--text)}
+  @media (hover:hover){ .iconbtn:hover{background:var(--surface2); color:var(--text)} }
   .empty{text-align:center; color:var(--muted); padding:60px 20px; font-size:14px}
 
   .fab{
@@ -196,7 +198,7 @@
     background:var(--accent); border:none; color:#fff; font-size:32px; cursor:pointer;
     box-shadow:var(--shadow); z-index:30; display:grid; place-items:center; transition:.15s;
   }
-  .fab:hover{background:var(--accent-hover); transform:scale(1.06)}
+  @media (hover:hover){ .fab:hover{background:var(--accent-hover); transform:scale(1.06)} }
 
   .toast{
     position:fixed; bottom:calc(26px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom))); left:50%; transform:translateX(-50%) translateY(80px);
@@ -235,9 +237,9 @@
   .modal-actions{display:flex; gap:10px; justify-content:flex-end; margin-top:6px; flex-wrap:wrap}
   .btn{padding:11px 18px; border-radius:10px; border:none; cursor:pointer; font-size:14px; font-weight:500}
   .btn.primary{background:var(--accent); color:#fff}
-  .btn.primary:hover{background:var(--accent-hover)}
+  @media (hover:hover){ .btn.primary:hover{background:var(--accent-hover)} }
   .btn.ghost{background:var(--surface2); color:var(--text); border:1px solid var(--border)}
-  .btn.ghost:hover{border-color:var(--accent)}
+  @media (hover:hover){ .btn.ghost:hover{border-color:var(--accent)} }
   .btn.block{width:100%; text-align:left; margin-bottom:8px; display:flex; align-items:center; gap:10px}
 
   .set-group{margin-bottom:16px}
@@ -283,7 +285,7 @@
     color:var(--muted); font-size:12.5px; cursor:pointer; white-space:nowrap; flex-shrink:0;
   }
   @media (max-width:480px){ .head-inner h1{font-size:19px} .sync-pill{padding:5px 9px} }
-  .sync-pill:hover{border-color:var(--accent)}
+  @media (hover:hover){ .sync-pill:hover{border-color:var(--accent)} }
   .sync-pill.ok{color:var(--c-green)}
   .sync-pill.busy{color:var(--c-blue)}
   .sync-pill.err{color:var(--c-red); border-color:var(--c-red)}

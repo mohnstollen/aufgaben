@@ -23,4 +23,12 @@
         <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
         <item name="android:background">@drawable/splash</item>
     </style>
+
+    <!-- Schnelleingabe: kleiner Dialog über anderen Apps, hell/dunkel nach System -->
+    <style name="AppTheme.QuickAdd" parent="Theme.AppCompat.DayNight.Dialog">
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowMinWidthMajor">90%</item>
+        <item name="android:windowMinWidthMinor">90%</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
 </resources>

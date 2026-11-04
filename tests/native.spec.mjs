@@ -85,3 +85,19 @@ test.describe('Update-Prüfung', () => {
     await expect(page.locator('#toast')).toContainText('Version 1.1.12 ist verfügbar', { timeout: 8000 });
   });
 });
+
+test('Schnelleingabe-Dialog: Einträge werden beim Start übernommen (reiner Text → Schnellaufgabe)', async ({ browser }) => {
+  const { page, errors } = await openApp(browser, { native: { inbox: [
+    { text: 'Milch kaufen', ts: 1000 },
+    { text: 'Zahnarzt anrufen morgen #telefon', ts: 2000 },
+  ] } });
+  await expect(page.locator('#toastMsg')).toHaveText('2 Aufgaben aus der Schnelleingabe übernommen');
+  const tasks = await page.evaluate(() => data.tasks.map(t => ({ name: t.name, quick: !!t.quick, tags: t.tags, created: t.created })));
+  expect(tasks).toEqual([
+    { name: 'Milch kaufen', quick: true, tags: [], created: 1000 },
+    { name: 'Zahnarzt anrufen', quick: false, tags: ['telefon'], created: 2000 }]);
+  // beim Zurückkehren in die App wird erneut nachgesehen
+  await page.evaluate(() => window.__native.fire('appStateChange', { isActive: true }));
+  await expect.poll(() => page.evaluate(() => window.__native.log.filter(l => l.startsWith('inbox')).length)).toBe(2);
+  expect(errors).toEqual([]);
+});

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_quick_add"
+        android:shortcutId="neue_aufgabe"
+        android:shortcutLongLabel="@string/quick_add_long"
+        android:shortcutShortLabel="@string/quick_add_short">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="io.github.mohnstollen.aufgaben.QuickAddActivity"
+            android:targetPackage="io.github.mohnstollen.aufgaben" />
+    </shortcut>
+</shortcuts>

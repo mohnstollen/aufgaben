@@ -4,4 +4,20 @@
     <string name="title_activity_main">Aufgaben</string>
     <string name="package_name">io.github.mohnstollen.aufgaben</string>
     <string name="custom_url_scheme">io.github.mohnstollen.aufgaben</string>
+    <string name="quick_add_label">Neue Aufgabe</string>
+    <string name="quick_add_title">Neue Aufgabe</string>
+    <string name="quick_add_hint">z. B. Milch kaufen · Zahnarzt morgen #telefon</string>
+    <string name="quick_add_syntax">Reiner Text = Schnellaufgabe · #tag, morgen, (A), wöchentlich wie in der App</string>
+    <string name="quick_add_button">Hinzufügen</string>
+    <string name="quick_add_cancel">Abbrechen</string>
+    <string name="quick_add_saved">Aufgabe gespeichert – erscheint beim nächsten Öffnen der App</string>
+    <string name="quick_add_short">Neue Aufgabe</string>
+    <string name="quick_add_long">Neue Aufgabe hinzufügen</string>
+    <string name="quick_add_tile">＋ Aufgabe</string>
+    <string name="quick_add_widget">Aufgaben</string>
+    <string name="quick_add_widget_desc">Schnellaufgaben, überfällige und heutige Aufgaben – abhaken und neue hinzufügen</string>
+    <string name="widget_title">Aufgaben</string>
+    <string name="widget_title_count">Aufgaben · %1$d offen</string>
+    <string name="widget_empty">Nichts Dringendes 🎉</string>
+    <string name="widget_done">Erledigt</string>
 </resources>

@@ -53,6 +53,7 @@
     color-scheme:light;
   }
   *{box-sizing:border-box}
+  [hidden]{display:none !important}
   html,body{overscroll-behavior-y:contain}
   body{
     margin:0; font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
@@ -60,40 +61,49 @@
     min-height:100vh; -webkit-tap-highlight-color:transparent;
   }
   header{
-    padding:calc(18px + var(--safe-area-inset-top, env(safe-area-inset-top))) 26px 14px; position:sticky; top:0; z-index:20;
+    padding:calc(8px + var(--safe-area-inset-top, env(safe-area-inset-top))) 12px 8px; position:sticky; top:0; z-index:20;
     background:var(--header-bg); backdrop-filter:blur(10px);
     border-bottom:1px solid var(--border);
   }
-  h1{margin:0; font-size:22px; letter-spacing:.3px}
-  .wrap{max-width:920px; margin:0 auto; padding:18px 20px 120px}
+  h1{margin:0; font-size:20px; letter-spacing:.3px}
+  .wrap{max-width:920px; margin:0 auto; padding:10px 14px 120px}
+  .head-inner{max-width:920px; margin:0 auto; display:flex; align-items:center; gap:4px}
+  .head-inner h1{flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-left:4px}
+  .hbtn{position:relative; width:40px; height:40px; border-radius:10px; border:none; background:none; color:var(--muted);
+    display:grid; place-items:center; cursor:pointer; flex-shrink:0}
+  .hbtn.on{background:var(--surface2); color:var(--text)}
+  /* Hover-Effekte nur mit Maus – auf Touchscreens bleiben sie sonst nach dem Antippen „hängen“ */
+  @media (hover:hover){ .hbtn:hover{background:var(--surface2); color:var(--text)} }
+  .hbtn.active{color:var(--accent)}
+  .hbtn .badge-n{position:absolute; top:4px; right:3px; min-width:16px; height:16px; border-radius:8px; padding:0 4px;
+    background:var(--accent); color:#fff; font-size:10.5px; font-weight:700; line-height:16px; text-align:center}
+  .hbtn select{position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%}   /* natives Auswahlmenü über dem Symbol */
+  .panel{margin-bottom:10px}
+  .searchrow{display:flex; align-items:center; gap:6px; background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; padding:0 4px 0 12px}
+  .searchrow:focus-within{border-color:var(--accent)}
+  .searchrow input{flex:1; min-width:0; border:none; background:none; color:var(--text); font-size:16px; padding:10px 0; outline:none; font-family:inherit}
 
-  .toolbar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:16px}
-  .search{flex:1 1 220px; position:relative}
-  .search input{
-    width:100%; padding:11px 12px 11px 38px; border-radius:10px;
-    border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:16px;
-  }
-  .search svg{position:absolute; left:12px; top:50%; transform:translateY(-50%); opacity:.5}
   select,button,input,textarea{font-family:inherit}
   .ctrl{
     padding:10px 12px; border-radius:10px; border:1px solid var(--border);
     background:var(--surface); color:var(--text); font-size:13px; cursor:pointer;
   }
-  .ctrl:hover{border-color:var(--accent)}
+  @media (hover:hover){ .ctrl:hover{border-color:var(--accent)} }
 
-  .filters{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px}
+  .filters{display:flex; flex-wrap:wrap; gap:8px}
   .chip{
     padding:7px 12px; border-radius:20px; border:1px solid var(--border); font-family:inherit;
     background:var(--surface); font-size:12.5px; cursor:pointer; color:var(--muted);
     display:inline-flex; align-items:center; gap:6px; transition:.15s;
   }
-  .chip:hover{border-color:var(--accent)}
+  @media (hover:hover){ .chip:hover{border-color:var(--accent)} }
   .chip.active{background:var(--accent); border-color:var(--accent); color:#fff}
   .chip .dot{width:8px; height:8px; border-radius:50%}
   .chip.more{border-style:dashed}
   .chip.reset{color:var(--c-red); border-color:var(--c-red)}
 
-  .tabs{display:flex; gap:6px; margin-bottom:14px}
+  .tabs{display:flex; gap:6px; margin-bottom:10px}
   .tab{
     padding:9px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-family:inherit;
     color:var(--muted); border:1px solid transparent; background:none;
@@ -108,6 +118,17 @@
   .group-h .n{font-weight:500; opacity:.8}
   .group-h.overdue{color:var(--c-red)}
   .group-h.today{color:var(--c-blue)}
+  .group-h.qsec{color:var(--c-amber)}
+  .quick-add{display:flex; align-items:center; gap:10px; background:var(--surface); border:1px dashed var(--border);
+    border-radius:var(--radius); padding:2px 4px 2px 14px; margin-bottom:10px}
+  .quick-add:focus-within{border-style:solid; border-color:var(--accent)}
+  .quick-add input{flex:1; min-width:0; border:none; background:none; color:var(--text); font-size:16px; padding:9px 0; outline:none; font-family:inherit}
+  .quick-add .qa-btn{border:none; background:var(--accent); color:#fff; border-radius:10px; width:36px; height:36px; font-size:20px; cursor:pointer}
+  .task.is-quick{padding:4px 6px 4px 12px; align-items:center; border-left-color:var(--border)}
+  .task.is-quick .check{margin-top:0}
+  .task.is-quick .tname{font-weight:500}
+  .quick-toggle{display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--surface2); border-radius:10px; margin-bottom:14px; font-size:14px; cursor:pointer}
+  .quick-toggle input{width:18px; height:18px; accent-color:var(--accent)}
   .group-h .gh-btn{margin-left:auto; text-transform:none; letter-spacing:0; font-size:12px; font-weight:600; font-family:inherit;
     background:none; border:1px solid currentColor; color:inherit; border-radius:14px; padding:4px 10px; cursor:pointer}
   button.badge{border:none; font-family:inherit; cursor:pointer}
@@ -120,7 +141,7 @@
   .due-quick button{font-size:12px; padding:5px 10px; border-radius:14px; border:1px solid var(--border);
     background:var(--surface); color:var(--text); cursor:pointer; font-family:inherit}
 
-  .list{display:flex; flex-direction:column; gap:10px}
+  .list{display:flex; flex-direction:column; gap:8px}
   .swipe{position:relative; border-radius:var(--radius)}
   .swipe-bg{position:absolute; inset:0; border-radius:var(--radius); display:none; align-items:center;
     justify-content:space-between; padding:0 22px; font-weight:600; font-size:14px; color:#fff}
@@ -133,10 +154,10 @@
   .task{
     position:relative; touch-action:pan-y;
     background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
-    padding:12px 12px 12px 14px; display:flex; gap:10px; align-items:flex-start;
+    padding:10px 10px 10px 12px; display:flex; gap:10px; align-items:flex-start;
     border-left:4px solid var(--border); transition:.15s;
   }
-  .task:hover{border-color:var(--accent); border-left-color:var(--accent)}
+  @media (hover:hover){ .task:hover{border-color:var(--accent); border-left-color:var(--accent)} }
   .task.prio-Hoch{border-left-color:var(--prio-high)}
   .task.prio-Mittel{border-left-color:var(--prio-mid)}
   .task.prio-Niedrig{border-left-color:var(--prio-low)}
@@ -147,7 +168,7 @@
     cursor:pointer; flex-shrink:0; margin:4px 4px 0 2px; display:grid; place-items:center; transition:.15s;
   }
   .check::after{content:""; position:absolute; inset:-12px}   /* größere Tippfläche */
-  .check:hover{border-color:var(--green)}
+  @media (hover:hover){ .check:hover{border-color:var(--green)} }
   .check.on{background:var(--green); border-color:var(--green)}
   .check.on svg{display:block}
   .check svg{display:none}
@@ -169,7 +190,7 @@
     background:transparent; border:none; color:var(--muted); cursor:pointer;
     min-width:40px; min-height:40px; padding:8px; border-radius:10px; display:grid; place-items:center; font-size:15px;
   }
-  .iconbtn:hover{background:var(--surface2); color:var(--text)}
+  @media (hover:hover){ .iconbtn:hover{background:var(--surface2); color:var(--text)} }
   .empty{text-align:center; color:var(--muted); padding:60px 20px; font-size:14px}
 
   .fab{
@@ -177,7 +198,7 @@
     background:var(--accent); border:none; color:#fff; font-size:32px; cursor:pointer;
     box-shadow:var(--shadow); z-index:30; display:grid; place-items:center; transition:.15s;
   }
-  .fab:hover{background:var(--accent-hover); transform:scale(1.06)}
+  @media (hover:hover){ .fab:hover{background:var(--accent-hover); transform:scale(1.06)} }
 
   .toast{
     position:fixed; bottom:calc(26px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom))); left:50%; transform:translateX(-50%) translateY(80px);
@@ -216,9 +237,9 @@
   .modal-actions{display:flex; gap:10px; justify-content:flex-end; margin-top:6px; flex-wrap:wrap}
   .btn{padding:11px 18px; border-radius:10px; border:none; cursor:pointer; font-size:14px; font-weight:500}
   .btn.primary{background:var(--accent); color:#fff}
-  .btn.primary:hover{background:var(--accent-hover)}
+  @media (hover:hover){ .btn.primary:hover{background:var(--accent-hover)} }
   .btn.ghost{background:var(--surface2); color:var(--text); border:1px solid var(--border)}
-  .btn.ghost:hover{border-color:var(--accent)}
+  @media (hover:hover){ .btn.ghost:hover{border-color:var(--accent)} }
   .btn.block{width:100%; text-align:left; margin-bottom:8px; display:flex; align-items:center; gap:10px}
 
   .set-group{margin-bottom:16px}
@@ -259,14 +280,12 @@
   .fname{font-family:ui-monospace,Consolas,monospace; font-size:12.5px}
   .stale-tag{font-size:10.5px; color:var(--c-amber); background:var(--c-amber-bg); padding:2px 7px; border-radius:12px; margin-left:6px}
 
-  .head-row{display:flex; align-items:center; justify-content:space-between; gap:12px}
-  .head-row h1{min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .sync-pill{
     padding:6px 12px; border-radius:20px; border:1px solid var(--border); background:var(--surface);
     color:var(--muted); font-size:12.5px; cursor:pointer; white-space:nowrap; flex-shrink:0;
   }
-  @media (max-width:480px){ header{padding-left:4px; padding-right:4px} h1{font-size:19px} }
-  .sync-pill:hover{border-color:var(--accent)}
+  @media (max-width:480px){ .head-inner h1{font-size:19px} .sync-pill{padding:5px 9px} }
+  @media (hover:hover){ .sync-pill:hover{border-color:var(--accent)} }
   .sync-pill.ok{color:var(--c-green)}
   .sync-pill.busy{color:var(--c-blue)}
   .sync-pill.err{color:var(--c-red); border-color:var(--c-red)}
@@ -283,33 +302,40 @@
 </head>
 <body>
 <header>
-  <div class="wrap head-row" style="padding-bottom:0">
-    <h1>📋 Aufgabenverwaltung</h1>
+  <div class="head-inner">
+    <h1>Aufgaben</h1>
     <button id="syncStatus" class="sync-pill" style="display:none" title="Jetzt synchronisieren"></button>
+    <button type="button" class="hbtn" id="searchBtn" title="Suchen" aria-label="Suchen"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+    <button type="button" class="hbtn" id="filterBtn" title="Nach Tags filtern" aria-label="Nach Tags filtern"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg><span class="badge-n" id="filterCount" hidden></span></button>
+    <div class="hbtn" title="Sortieren"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/></svg>
+      <select id="sort" aria-label="Sortieren">
+        <option value="due">Nach Fälligkeit</option>
+        <option value="prio">Nach Priorität</option>
+        <option value="name">Nach Name</option>
+        <option value="created">Nach Erstellung</option>
+      </select>
+    </div>
+    <button type="button" class="hbtn" id="settingsBtn" title="Einstellungen" aria-label="Einstellungen"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg></button>
   </div>
 </header>
 
 <div class="wrap">
-  <div class="toolbar">
-    <div class="search">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-      <input id="search" type="text" placeholder="Aufgaben durchsuchen…">
-    </div>
-    <select id="sort" class="ctrl">
-      <option value="due">Sortieren: Fälligkeit</option>
-      <option value="prio">Sortieren: Priorität</option>
-      <option value="name">Sortieren: Name</option>
-      <option value="created">Sortieren: Erstellt</option>
-    </select>
-    <button id="settingsBtn" class="ctrl">⚙️ Einstellungen</button>
-    <input type="file" id="importFile" accept="application/json,.json,text/plain,.txt" style="display:none">
+  <input type="file" id="importFile" accept="application/json,.json,text/plain,.txt" style="display:none">
+  <div class="panel searchrow" id="searchPanel" hidden>
+    <input id="search" type="search" placeholder="Aufgaben durchsuchen…" enterkeyhint="search">
+    <button type="button" class="iconbtn" id="searchClose" aria-label="Suche schließen">✕</button>
   </div>
-
-  <div class="filters" id="filters"></div>
+  <div class="panel filters" id="filters" hidden></div>
 
   <div class="tabs" role="tablist">
     <button type="button" class="tab active" role="tab" aria-selected="true" id="tabActive">Offen<span class="cnt" id="cntActive"></span></button>
     <button type="button" class="tab" role="tab" aria-selected="false" id="tabArchive">Erledigt<span class="cnt" id="cntArchive"></span></button>
+  </div>
+
+  <div class="quick-add" id="quickAddBox">
+    <span aria-hidden="true">⚡</span>
+    <input type="text" id="quickAdd" placeholder="Schnellaufgabe … (Enter)" autocomplete="off" enterkeyhint="done" aria-label="Schnellaufgabe hinzufügen">
+    <button type="button" class="qa-btn" id="quickAddBtn" aria-label="Hinzufügen">+</button>
   </div>
 
   <div class="list" id="list"></div>
@@ -326,9 +352,9 @@
 
     <div class="quick" id="quickBox">
       <label for="fQuick">Schnelleingabe (todo.txt-Stil)</label>
-      <input type="text" id="fQuick" placeholder="z. B. Steuer machen +Büro @wichtig freitag (A)" autocomplete="off" enterkeyhint="done">
+      <input type="text" id="fQuick" placeholder="z. B. Steuer machen #büro #wichtig freitag (A)" autocomplete="off" enterkeyhint="done">
       <div class="syntax">
-        <code>+Projekt</code> · <code>@tag</code> oder <code>#tag</code> (mehrfach) · <code>(A)</code>/<code>(B)</code>/<code>(C)</code> = Hoch/Mittel/Niedrig<br>
+        <code>#tag</code> (auch <code>@tag</code>, <code>+tag</code>; mehrfach) · <code>(A)</code>/<code>(B)</code>/<code>(C)</code> = Hoch/Mittel/Niedrig<br>
         Wiederholen: <code>täglich</code> <code>wöchentlich</code> <code>monatlich</code> <code>jährlich</code> <code>rec:2w</code><br>
         Fällig: <code>heute</code> <code>morgen</code> <code>übermorgen</code> <code>freitag</code> <code>+3t</code> <code>+2w</code> <code>24.12.</code> <code>2026-12-24</code>
       </div>
@@ -342,6 +368,8 @@
         <label>Name der Aufgabe *</label>
         <input type="text" id="fName" placeholder="Was ist zu tun?">
       </div>
+      <label class="quick-toggle"><input type="checkbox" id="fIsQuick"> ⚡ Schnellaufgabe – nur der Text, ohne Datum, Priorität und Tags</label>
+      <div id="fullFields">
       <div class="row2">
         <div class="field">
           <label>Fälligkeitsdatum</label>
@@ -365,17 +393,14 @@
         <select id="fRec"></select>
       </div>
       <div class="field">
-        <label>Projekt</label>
-        <select id="fProject"></select>
-      </div>
-      <div class="field">
         <label>Tags</label>
-        <input type="text" id="fTags" placeholder="z. B. wichtig, büro, telefon">
+        <input type="text" id="fTags" placeholder="z. B. garten, einkaufen, telefon">
         <div class="hint">Mehrere Tags mit Komma trennen. Neue Tags werden automatisch angelegt.</div>
       </div>
       <div class="field">
         <label for="fNote">Notiz</label>
         <textarea id="fNote" rows="3" placeholder="Details, Links, Telefonnummern …"></textarea>
+      </div>
       </div>
     </div>
 
@@ -422,7 +447,7 @@
 
     <div class="set-group">
       <h3>Organisation</h3>
-      <button class="btn ghost block" id="manageBtn">🏷️ Tags &amp; Projekte verwalten</button>
+      <button class="btn ghost block" id="manageBtn">🏷️ Tags verwalten</button>
     </div>
 
     <div class="set-group">
@@ -482,15 +507,7 @@
 <!-- Manage Modal -->
 <div class="overlay" id="manageOverlay">
   <div class="modal">
-    <h2>Tags &amp; Projekte verwalten</h2>
-    <div class="manage-group">
-      <h3>Projekte</h3>
-      <div id="projList"></div>
-      <div class="add-inline">
-        <input type="text" id="newProj" placeholder="Neues Projekt…">
-        <button class="btn primary" id="addProj">+</button>
-      </div>
-    </div>
+    <h2>Tags verwalten</h2>
     <div class="manage-group">
       <h3>Tags</h3>
       <div id="tagList"></div>
@@ -515,7 +532,7 @@
         <option value="merge">Zusammenführen (bestehende Daten behalten)</option>
         <option value="replace">Ersetzen (alle aktuellen Daten überschreiben)</option>
       </select>
-      <div class="hint" id="importHint">Beim Zusammenführen werden nur neue Aufgaben, Tags und Projekte ergänzt. Doppelte werden übersprungen.</div>
+      <div class="hint" id="importHint">Beim Zusammenführen werden nur neue Aufgaben und Tags ergänzt. Doppelte werden übersprungen.</div>
     </div>
     <div class="field">
       <div id="importSummary" class="hint" style="font-size:13px"></div>
@@ -661,7 +678,8 @@ const Native = IS_NATIVE ? window.Capacitor.Plugins : {};
 if(IS_NATIVE) document.documentElement.classList.add('native');
 const TOMBSTONE_DAYS = 180;
 /* tombstones: { taskId: gelöschtAm }, listLog: { 'p:Name'|'t:Name': {ts, del} } – nötig für den Sync */
-const defaultData = { tasks:[], projects:['Allgemein'], tags:['wichtig'], tombstones:{}, listLog:{} };
+/* projects bleibt als leere Liste in den Daten, damit ältere App-Versionen die Sync-Datei weiter lesen können */
+const defaultData = { tasks:[], projects:[], tags:[], tombstones:{}, listLog:{} };
 let data = load();
 let snapshot = takeSnapshot(data);
 
@@ -680,11 +698,22 @@ function normalizeData(d){
   if(!d.tombstones || typeof d.tombstones!=='object') d.tombstones={};
   if(!d.listLog || typeof d.listLog!=='object') d.listLog={};
   d.tasks.forEach(t=>{ if(!t.id) t.id=uid(); if(!t.updatedAt) t.updatedAt=t.doneAt||t.created||0; });
-  if(!d.projects.length) d.projects=['Allgemein'];
+  return migrateProjects(d);
+}
+/* Es gibt nur noch Tags: aus einem Projekt wird ein Tag. „Allgemein“ war nur ein Platzhalter und entfällt. */
+function migrateProjects(d){
+  d.tasks.forEach(t=>{
+    if(!('project' in t)) return;
+    if(t.project && t.project!=='Allgemein'){ t.tags=t.tags||[]; if(!t.tags.includes(t.project)) t.tags.push(t.project); }
+    delete t.project;
+  });
+  (d.projects||[]).forEach(p=>{ if(p!=='Allgemein' && !d.tags.includes(p) && !d.listLog?.['t:'+p]?.del) d.tags.push(p); });
+  d.projects=[];
+  d.tasks.forEach(t=>(t.tags||[]).forEach(tg=>{ if(!d.tags.includes(tg)) d.tags.push(tg); }));
   return d;
 }
 function persist(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); }
-function save(){ trackChanges(); persist(); autoBackup(); scheduleSync(); }
+function save(){ migrateProjects(data); trackChanges(); persist(); autoBackup(); scheduleSync(); }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
 /* ---------- Änderungsverfolgung ----------
@@ -735,8 +764,7 @@ function mergeData(a,b){
   };
   const projects=mergeList('p', a.projects, b.projects||[], tasks.map(t=>t.project));
   const tags=mergeList('t', a.tags, b.tags||[], tasks.flatMap(t=>t.tags||[]));
-  if(!projects.length) projects.push('Allgemein');
-  return { tasks, projects, tags, tombstones, listLog };
+  return migrateProjects({ tasks, projects, tags, tombstones, listLog });
 }
 /* Reihenfolge-unabhängige Darstellung, um "hat sich etwas geändert?" zu prüfen */
 function canon(d){
@@ -753,14 +781,12 @@ const ui = loadUi();
 let view = ui.view==='archive' ? 'archive' : 'active';
 let sortBy = ['due','prio','name','created'].includes(ui.sortBy) ? ui.sortBy : 'due';
 let searchTerm = '';
-let activeFilters = {
-  tags:new Set((ui.tags||[]).filter(t=>data.tags.includes(t))),
-  projects:new Set((ui.projects||[]).filter(p=>data.projects.includes(p))) };
+let activeFilters = { tags:new Set((ui.tags||[]).filter(t=>data.tags.includes(t))) };
 let pendingImport = null;
 function loadUi(){ try{ return JSON.parse(localStorage.getItem(LS_UI))||{}; }catch(e){ return {}; } }
 function saveUi(){
-  try{ localStorage.setItem(LS_UI, JSON.stringify({ view, sortBy, filtersOpen:!!ui.filtersOpen,
-    tags:[...activeFilters.tags], projects:[...activeFilters.projects] })); }catch(e){}
+  try{ localStorage.setItem(LS_UI, JSON.stringify({ view, sortBy,
+    tags:[...activeFilters.tags] })); }catch(e){}
 }
 
 /* ---------- Elements ---------- */
@@ -843,11 +869,10 @@ function taskToTodoTxt(t){
     parts.push('x'); parts.push(toDateStr(t.doneAt)||toDateStr(Date.now()));
     if(t.created) parts.push(toDateStr(t.created));
   } else {
-    if(t.prio && PRIO_TO_LETTER[t.prio]) parts.push('('+PRIO_TO_LETTER[t.prio]+')');
+    if(t.prio && PRIO_TO_LETTER[t.prio] && !t.quick) parts.push('('+PRIO_TO_LETTER[t.prio]+')');
     if(t.created) parts.push(toDateStr(t.created));
   }
   parts.push(t.name);
-  if(t.project) parts.push('+'+String(t.project).replace(/\s+/g,'_'));
   (t.tags||[]).forEach(tg=> parts.push('@'+String(tg).replace(/\s+/g,'_')));
   if(t.due) parts.push('due:'+t.due);
   if(t.rec) parts.push('rec:'+t.rec);
@@ -857,7 +882,7 @@ function taskToTodoTxt(t){
 function todoTxtToTask(line){
   let s=(line||'').trim();
   if(!s || s.startsWith('#')) return null;
-  let done=false, doneAt=null, created=null, prio=null, due=null, project=null, rec=null;
+  let done=false, doneAt=null, created=null, prio=null, due=null, rec=null;
   const tags=[];
   if(/^x\s+/i.test(s)){
     done=true; s=s.replace(/^x\s+/i,'');
@@ -874,8 +899,7 @@ function todoTxtToTask(line){
   }
   const words=s.split(/\s+/); const nameWords=[];
   for(const w of words){
-    if(w.startsWith('+') && w.length>1){ if(!project) project=w.slice(1); }
-    else if(w.startsWith('@') && w.length>1){ const tg=w.slice(1); if(!tags.includes(tg)) tags.push(tg); }
+    if((w[0]==='+' || w[0]==='@') && w.length>1){ const tg=w.slice(1); if(!tags.includes(tg)) tags.push(tg); }   // +Projekt wird zum Tag
     else if(/^due:\d{4}-\d{2}-\d{2}$/i.test(w)){ due=w.slice(4); }
     else if(/^rec:/i.test(w) && parseRec(w.slice(4))){ rec=parseRec(w.slice(4)).value; }
     else if(/^pri:[A-Za-z]$/i.test(w)){ if(!prio) prio=LETTER_TO_PRIO[w.slice(4).toUpperCase()]||null; }
@@ -883,9 +907,9 @@ function todoTxtToTask(line){
     else nameWords.push(w);
   }
   const name=nameWords.join(' ').trim();
-  if(!name && !project && !tags.length) return null;
+  if(!name && !tags.length) return null;
   const t={ id:uid(), name:name||'(ohne Titel)', due:due||null, prio:prio||'Mittel',
-    project:project||null, tags, done, doneAt:done?(doneAt||Date.now()):null, created:created||Date.now() };
+    tags, done, doneAt:done?(doneAt||Date.now()):null, created:created||Date.now() };
   if(rec) t.rec=rec;
   return t;
 }
@@ -893,12 +917,11 @@ function buildTodoTxt(){ return data.tasks.map(taskToTodoTxt).join('\n') + (data
 function parseTodoTxtFile(content){
   const tasks=content.split(/\r?\n/).map(todoTxtToTask).filter(Boolean);
   if(!tasks.length) throw new Error('Keine Aufgaben in der todo.txt gefunden.');
-  const projects=[], tags=[];
+  const tags=[];
   tasks.forEach(t=>{
-    if(t.project && !projects.includes(t.project)) projects.push(t.project);
     (t.tags||[]).forEach(tg=>{ if(!tags.includes(tg)) tags.push(tg); });
   });
-  return { tasks, projects, tags };
+  return { tasks, projects:[], tags };
 }
 
 /* ---------- Interne Snapshots ---------- */
@@ -1007,30 +1030,25 @@ async function nativeCleanupBackups(){
 }
 
 /* ---------- Rendering ---------- */
-const FILTER_CHIP_LIMIT = 8;
 function renderFilters(){
   const f = $('filters'); f.innerHTML='';
-  const chips = [
-    ...data.projects.map(p=>({ kind:'projects', v:p, label:p, dot:'var(--c-teal)' })),
-    ...data.tags.map(t=>({ kind:'tags', v:t, label:'#'+t, dot:'var(--c-violet)' })) ];
-  const many = chips.length > FILTER_CHIP_LIMIT;
-  // Bei vielen Chips: eingeklappt nur die ersten plus alle aktiven zeigen
-  const shown = many && !ui.filtersOpen ? chips.filter((c,i)=>i<FILTER_CHIP_LIMIT || activeFilters[c.kind].has(c.v)) : chips;
   const addChip = (cls, html, onclick, pressed)=>{
     const b=document.createElement('button'); b.type='button'; b.className='chip'+cls; b.innerHTML=html; b.onclick=onclick;
     if(pressed!==undefined) b.setAttribute('aria-pressed', pressed);
     f.appendChild(b);
   };
-  shown.forEach(c=>{
-    const on=activeFilters[c.kind].has(c.v);
-    addChip(on?' active':'', `<span class="dot" style="background:${c.dot}"></span>${escapeHtml(c.label)}`,
-      ()=>{ toggleSet(activeFilters[c.kind], c.v); saveUi(); renderFilters(); render(); }, on);
+  data.tags.forEach(t=>{
+    const on=activeFilters.tags.has(t);
+    addChip(on?' active':'', `<span class="dot" style="background:var(--c-violet)"></span>#${escapeHtml(t)}`,
+      ()=>{ toggleSet(activeFilters.tags, t); saveUi(); renderFilters(); render(); }, on);
   });
-  if(many) addChip(' more', ui.filtersOpen ? 'weniger' : `+${chips.length-shown.length} weitere`,
-    ()=>{ ui.filtersOpen=!ui.filtersOpen; saveUi(); renderFilters(); });
-  if(activeFilters.projects.size || activeFilters.tags.size) addChip(' reset', '✕ Filter zurücksetzen', resetFilters);
+  if(!data.tags.length) f.innerHTML='<span class="hint">Noch keine Tags – z. B. #einkaufen in der Schnelleingabe.</span>';
+  if(activeFilters.tags.size) addChip(' reset', '✕ Filter zurücksetzen', resetFilters);
+  const n=activeFilters.tags.size;
+  $('filterCount').hidden=!n; $('filterCount').textContent=n;
+  $('filterBtn').classList.toggle('active', !!n);
 }
-function resetFilters(){ activeFilters.projects.clear(); activeFilters.tags.clear(); saveUi(); renderFilters(); render(); }
+function resetFilters(){ activeFilters.tags.clear(); saveUi(); renderFilters(); render(); }
 function toggleSet(set,v){ set.has(v)?set.delete(v):set.add(v); }
 
 const cmpDue = (a,b)=>{ if(!a.due&&!b.due)return 0; if(!a.due)return 1; if(!b.due)return -1; return a.due.localeCompare(b.due); };
@@ -1049,6 +1067,7 @@ function dueGroup(t){
 const GROUPS = [['overdue','Überfällig'],['today','Heute'],['tomorrow','Morgen'],['week','Nächste 7 Tage'],['later','Später'],['none','Ohne Datum']];
 
 function render(){
+  pushWidget();
   $('cntActive').textContent = data.tasks.filter(t=>!t.done).length;
   $('cntArchive').textContent = data.tasks.filter(t=>t.done).length;
   let items = data.tasks.filter(t => view==='archive' ? t.done : !t.done);
@@ -1056,20 +1075,30 @@ function render(){
     const q = searchTerm.toLowerCase();
     items = items.filter(t =>
       t.name.toLowerCase().includes(q) ||
-      (t.project||'').toLowerCase().includes(q) ||
       (t.note||'').toLowerCase().includes(q) ||
       (t.tags||[]).some(tag=>tag.toLowerCase().includes(q)));
   }
-  if(activeFilters.projects.size) items = items.filter(t => activeFilters.projects.has(t.project));
   if(activeFilters.tags.size) items = items.filter(t => (t.tags||[]).some(tag=>activeFilters.tags.has(tag)));
   const chain = SORTS[sortBy] || SORTS.due;
   items.sort((a,b)=>{ for(const c of chain){ const r=c(a,b); if(r) return r; } return 0; });
   listEl.innerHTML='';
+  $('quickAddBox').style.display = view==='active' ? '' : 'none';
   if(!items.length){
-    const filtered = searchTerm || activeFilters.projects.size || activeFilters.tags.size;
+    const filtered = searchTerm || activeFilters.tags.size;
     listEl.innerHTML = `<div class="empty">${filtered ? 'Keine Aufgaben passen zu Suche oder Filter.'
       : view==='archive' ? 'Noch keine erledigten Aufgaben.' : 'Keine offenen Aufgaben. Lege mit + eine neue an!'}</div>`;
     return;
+  }
+  // Schnellaufgaben stehen oben in einem eigenen, kompakten Abschnitt (in der Reihenfolge des Anlegens)
+  if(view==='active'){
+    const quick=items.filter(t=>t.quick).sort((a,b)=>a.created-b.created);
+    if(quick.length){
+      const h=document.createElement('div'); h.className='group-h qsec';
+      h.innerHTML=`⚡ Schnell <span class="n">${quick.length}</span>`;
+      listEl.appendChild(h);
+      quick.forEach(t=>listEl.appendChild(taskCard(t)));
+      items=items.filter(t=>!t.quick);
+    }
   }
   if(view==='active' && sortBy==='due'){
     // Nach Fälligkeit gruppiert: Überfällig, Heute, Morgen, …
@@ -1097,23 +1126,22 @@ function taskCard(t){
   const dueBadge = !t.due ? '' : t.done ? `<span class="badge due" title="${fmtDate(t.due)}">📅 ${relDue(t.due)}</span>`
     : `<button type="button" class="badge due${overdue?' overdue':''}" data-act="postpone" title="${fmtDate(t.due)} – verschieben">📅 ${relDue(t.due)}</button>`;
   const recBadge = t.rec ? `<span class="badge rec" title="Wiederholt sich ${describeRec(t.rec)}">🔁 ${describeRec(t.rec)}</span>` : '';
-  const projBadge = t.project ? `<span class="badge proj">📁 ${escapeHtml(t.project)}</span>` : '';
   const tagBadges = (t.tags||[]).map(tg=>`<span class="badge tag">#${escapeHtml(tg)}</span>`).join('');
   const note = t.note ? `<div class="tnote">${escapeHtml(t.note)}</div>` : '';
   wrap.innerHTML = `
     <div class="swipe-bg" aria-hidden="true"><span class="sb-l">${t.done?'↺ Wieder öffnen':'✓ Erledigt'}</span><span class="sb-r">🗑 Löschen</span></div>
-    <div class="task prio-${t.prio}${t.done?' done':''}">
+    <div class="task ${t.quick?'is-quick':'prio-'+t.prio}${t.done?' done':''}">
       <button type="button" class="check ${t.done?'on':''}" data-act="toggle" role="checkbox" aria-checked="${!!t.done}"
         aria-label="${t.done?'Wieder öffnen':'Als erledigt markieren'}: ${escapeAttr(t.name)}">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
       </button>
       <div class="tbody" data-act="edit">
         <div class="tname">${escapeHtml(t.name)}</div>
-        ${note}
+        ${t.quick ? '' : `${note}
         <div class="meta">
           <span class="badge prio-${t.prio}">${prioIcon(t.prio)} ${t.prio}</span>
-          ${dueBadge}${recBadge}${projBadge}${tagBadges}
-        </div>
+          ${dueBadge}${recBadge}${tagBadges}
+        </div>`}
       </div>
       <div class="tactions">
         <button type="button" class="iconbtn" data-act="del" title="Löschen" aria-label="Löschen: ${escapeAttr(t.name)}">
@@ -1169,21 +1197,22 @@ function attachSwipe(wrap, card, t){
 }
 
 /* ---------- Task actions (mit Rückgängig statt Rückfrage) ---------- */
+/* Erledigt-Status setzen. Wiederkehrend: nächste Aufgabe anlegen – die ID ergibt sich aus Serie + Datum,
+   damit zwei Geräte, die dieselbe Aufgabe erledigen, beim Sync nicht zwei Folgeaufgaben erzeugen. */
+function setDone(t, done){
+  t.done=done; t.doneAt=done?Date.now():null;
+  if(!done || !parseRec(t.rec)) return null;
+  const due=nextDue(t), id2=`${t.id.split('~')[0]}~${due}`;
+  if(data.tasks.some(x=>x.id===id2)) return null;
+  const spawned={ ...t, id:id2, due, done:false, doneAt:null, created:Date.now() };
+  delete spawned.updatedAt;
+  data.tasks.push(spawned);
+  return spawned;
+}
 function toggleDone(id){
   const t=data.tasks.find(x=>x.id===id); if(!t) return;
   const prev={ done:t.done, doneAt:t.doneAt };
-  t.done=!t.done; t.doneAt=t.done?Date.now():null;
-  // Wiederkehrend: nächste Aufgabe anlegen. Die ID ergibt sich aus Serie + Datum, damit zwei Geräte,
-  // die dieselbe Aufgabe erledigen, beim Sync nicht zwei Folgeaufgaben erzeugen.
-  let spawned=null;
-  if(t.done && parseRec(t.rec)){
-    const due=nextDue(t), id2=`${t.id.split('~')[0]}~${due}`;
-    if(!data.tasks.some(x=>x.id===id2)){
-      spawned={ ...t, id:id2, due, done:false, doneAt:null, created:Date.now() };
-      delete spawned.updatedAt;
-      data.tasks.push(spawned);
-    }
-  }
+  const spawned=setDone(t, !t.done);
   save(); render();
   const msg = !t.done ? `„${shortName(t.name)}" wieder geöffnet`
     : spawned ? `Erledigt ✓ – nächstes Mal ${relDue(spawned.due)}` : `„${shortName(t.name)}" erledigt ✓`;
@@ -1193,6 +1222,66 @@ function toggleDone(id){
     if(spawned) data.tasks=data.tasks.filter(y=>y.id!==spawned.id);
     save(); render();
   }});
+}
+
+/* ---------- Schnell anlegen (Eingabezeile, später auch Android-Schnelleingabe) ----------
+   Reiner Text → Schnellaufgabe. Enthält der Text Syntax (Datum, Tag, Priorität, Wiederholung),
+   entsteht eine normale Aufgabe mit diesen Angaben. */
+function addFromText(text, created=Date.now()){
+  const raw=String(text||'').trim(); if(!raw) return null;
+  const p=parseQuick(raw);
+  const plain = !p.due && !p.prio && !p.tags.length && !p.rec;
+  const t={ id:uid(), name: plain ? raw : (p.name||raw), due:p.due, prio:p.prio||'Mittel', tags:p.tags,
+    done:false, doneAt:null, created };
+  if(plain) t.quick=true;
+  if(p.rec) t.rec=p.rec;
+  p.tags.forEach(tg=>{ if(!data.tags.includes(tg)) data.tags.push(tg); });
+  data.tasks.push(t);
+  save(); renderFilters(); render();
+  return t;
+}
+function submitQuickAdd(){
+  const t=addFromText($('quickAdd').value); if(!t) return;
+  $('quickAdd').value='';
+  if(!t.quick) toast(`„${shortName(t.name)}" angelegt`+(t.due?` · ${relDue(t.due)}`:''));
+}
+
+/* Android: Eingaben aus dem Schnelleingabe-Dialog (Verknüpfung, Kachel, Widget, Teilen) übernehmen */
+async function importQuickInbox(){
+  if(!Native.QuickInbox) return;
+  let items=[], done=[];
+  try{ ({ items=[], done=[] } = await Native.QuickInbox.take()); }catch(_){ return; }
+  // im Widget abgehakt
+  const finished=done.map(id=>data.tasks.find(t=>t.id===id && !t.done)).filter(Boolean);
+  finished.forEach(t=>setDone(t, true));
+  if(finished.length){ save(); render(); }
+  const added=items.map(i=>addFromText(i.text, i.ts||Date.now())).filter(Boolean);
+  const msgs=[];
+  if(added.length===1) msgs.push(`„${shortName(added[0].name)}" aus der Schnelleingabe übernommen`);
+  else if(added.length) msgs.push(`${added.length} Aufgaben aus der Schnelleingabe übernommen`);
+  if(finished.length) msgs.push(finished.length===1 ? `„${shortName(finished[0].name)}" im Widget erledigt ✓` : `${finished.length} im Widget erledigt ✓`);
+  if(msgs.length) toast(msgs.join(' · '));
+}
+
+/* Android-Widget: Schnellaufgaben, überfällige und heutige Aufgaben – nur senden, wenn sich etwas geändert hat */
+let lastWidgetData='';
+function widgetPayload(){
+  const open=data.tasks.filter(t=>!t.done);
+  const kindOf=t=> t.quick ? 'quick' : !t.due ? null : dayDiff(t.due)<0 ? 'overdue' : dayDiff(t.due)===0 ? 'today' : null;
+  const order={ quick:0, overdue:1, today:2 };
+  const items=open.map(t=>({ t, k:kindOf(t) })).filter(x=>x.k)
+    .sort((a,b)=>order[a.k]-order[b.k] || (a.k==='quick' ? a.t.created-b.t.created : cmpDue(a.t,b.t)||cmpPrio(a.t,b.t)))
+    .slice(0, 60)
+    .map(({ t, k })=>({ id:t.id, name:t.name, kind:k,
+      label: k==='quick' ? '⚡ Schnell' : (k==='overdue' ? 'Überfällig · '+relDue(t.due) : 'Heute') + (t.prio==='Hoch' ? ' · 🔴 Hoch' : '') }));
+  return JSON.stringify({ open:open.length, items });
+}
+function pushWidget(){
+  if(!IS_NATIVE || !Native.Widget) return;
+  const payload=widgetPayload();
+  if(payload===lastWidgetData) return;
+  lastWidgetData=payload;
+  Native.Widget.update({ data:payload }).catch(()=>{});
 }
 
 /* ---------- Verschieben ---------- */
@@ -1228,13 +1317,12 @@ function delTask(id){
     if(data.tasks.some(x=>x.id===t.id)) return;
     data.tasks.splice(Math.min(i, data.tasks.length), 0, t);
     (t.tags||[]).forEach(tg=>{ if(!data.tags.includes(tg)) data.tags.push(tg); });
-    if(t.project && !data.projects.includes(t.project)) data.projects.push(t.project);
     save(); renderFilters(); render();
   }});
 }
 
 /* ---------- Schnelleingabe-Parser ----------
-   todo.txt-Stil: +Projekt, @tag (auch #tag), (A)/(B)/(C), Datum in vielen Schreibweisen. */
+   todo.txt-Stil: #tag (auch @tag, +tag), (A)/(B)/(C), Datum in vielen Schreibweisen. */
 function parseDateWord(w){
   const s=w.toLowerCase().replace(/[,;]$/,'');
   const base=todayStart();
@@ -1263,7 +1351,7 @@ function parseDateWord(w){
   return null;
 }
 function parseQuick(text){
-  let due=null, prio=null, project=null, rec=null; const tags=[], nameWords=[];
+  let due=null, prio=null, rec=null; const tags=[], nameWords=[];
   for(const w of (text||'').split(/\s+/).filter(Boolean)){
     const pm=w.match(/^\(([A-Ca-c])\)$/);
     if(pm && !prio){ prio=LETTER_TO_PRIO[pm[1].toUpperCase()]; continue; }
@@ -1272,35 +1360,26 @@ function parseQuick(text){
     if(!rec && lw.startsWith('rec:') && parseRec(lw.slice(4))){ rec=parseRec(lw.slice(4)).value; continue; }
     const d=!due && parseDateWord(w);
     if(d){ due=d; continue; }
-    if(w.length>1 && w[0]==='+'){ if(!project) project=w.slice(1); continue; }
-    if(w.length>1 && (w[0]==='@' || w[0]==='#')){ const tg=w.slice(1); if(!tags.includes(tg)) tags.push(tg); continue; }
+    if(w.length>1 && '#@+'.includes(w[0])){ const tg=w.slice(1); if(!tags.includes(tg)) tags.push(tg); continue; }
     nameWords.push(w);
   }
-  return { name:nameWords.join(' '), due, prio, project, tags, rec };
+  return { name:nameWords.join(' '), due, prio, tags, rec };
 }
 function syncQuickToFields(){
   const parsed = parseQuick($('fQuick').value);
   $('fName').value = parsed.name; $('fDue').value = parsed.due||''; $('fPrio').value = parsed.prio||'Mittel';
-  const projSel = $('fProject');
-  if(parsed.project){
-    if(![...projSel.options].some(o=>o.value===parsed.project)){
-      const opt=document.createElement('option'); opt.value=parsed.project; opt.textContent=parsed.project+' (neu)'; projSel.appendChild(opt);
-    }
-    projSel.value = parsed.project;
-  }else projSel.value = '';
   $('fTags').value = parsed.tags.join(', ');
   refreshRecSelect(parsed.rec);
   renderQuickPreview(parsed);
 }
 function renderQuickPreview(parsed){
   const pv = $('quickPreview');
-  if(!parsed.name && !parsed.project && !parsed.tags.length && !parsed.due && !parsed.prio && !parsed.rec){ pv.innerHTML=''; return; }
+  if(!parsed.name && !parsed.tags.length && !parsed.due && !parsed.prio && !parsed.rec){ pv.innerHTML=''; return; }
   const prio = parsed.prio || 'Mittel';
   let html = `<div class="pv-name">${escapeHtml(parsed.name||'(kein Name)')}</div>`;
   html += `<span class="badge prio-${prio}">${prioIcon(prio)} ${prio}</span>`;
   if(parsed.due) html += `<span class="badge due">📅 ${relDue(parsed.due)} · ${fmtDate(parsed.due)}</span>`;
   if(parsed.rec) html += `<span class="badge rec">🔁 ${describeRec(parsed.rec)}</span>`;
-  if(parsed.project) html += `<span class="badge proj">📁 ${escapeHtml(parsed.project)}${data.projects.includes(parsed.project)?'':' •neu'}</span>`;
   parsed.tags.forEach(tg=>{ html += `<span class="badge tag">#${escapeHtml(tg)}${data.tags.includes(tg)?'':' •neu'}</span>`; });
   pv.innerHTML = html;
 }
@@ -1312,25 +1391,22 @@ function refreshRecSelect(sel){
   const list=REC_CHOICES.includes(v) ? REC_CHOICES : [...REC_CHOICES, v];
   $('fRec').innerHTML=list.map(x=>`<option value="${x}"${x===v?' selected':''}>${x ? describeRec(x).replace(/^./,c=>c.toUpperCase()) : 'Nie'}</option>`).join('');
 }
-function refreshProjectSelect(sel){
-  $('fProject').innerHTML = '<option value="">– kein Projekt –</option>' +
-    data.projects.map(p=>`<option value="${escapeAttr(p)}"${p===sel?' selected':''}>${escapeHtml(p)}</option>`).join('');
-}
+function setQuickMode(on){ $('fIsQuick').checked=on; $('fullFields').style.display = on ? 'none' : ''; }
 function openTask(id){
-  refreshProjectSelect(); $('fQuick').value=''; $('quickPreview').innerHTML='';
+  $('fQuick').value=''; $('quickPreview').innerHTML='';
   if(id){
     const t = data.tasks.find(x=>x.id===id);
     $('taskModalTitle').textContent='Aufgabe bearbeiten';
     $('quickBox').style.display='none'; $('toggleDetails').style.display='none'; $('detailsBox').classList.add('show');
     $('taskId').value=t.id; $('fName').value=t.name; $('fDue').value=t.due||''; $('fPrio').value=t.prio;
-    refreshProjectSelect(t.project); $('fTags').value=(t.tags||[]).join(', '); $('fNote').value=t.note||'';
-    refreshRecSelect(t.rec);
+    $('fTags').value=(t.tags||[]).join(', '); $('fNote').value=t.note||'';
+    refreshRecSelect(t.rec); setQuickMode(!!t.quick);
     $('deleteTaskBtn').style.display='';
   }else{
     $('taskModalTitle').textContent='Neue Aufgabe';
     $('quickBox').style.display='block'; $('toggleDetails').style.display='block'; $('detailsBox').classList.remove('show');
     $('taskId').value=''; $('fName').value=''; $('fDue').value=''; $('fPrio').value='Mittel';
-    refreshProjectSelect(); $('fTags').value=''; $('fNote').value=''; refreshRecSelect('');
+    $('fTags').value=''; $('fNote').value=''; refreshRecSelect(''); setQuickMode(false);
     $('deleteTaskBtn').style.display='none';
   }
   $('taskOverlay').classList.add('show');
@@ -1343,18 +1419,20 @@ function saveTask(){
   if(!name){ ($('quickBox').style.display!=='none'?$('fQuick'):$('fName')).focus(); return; }
   const tags = $('fTags').value.split(',').map(s=>s.trim()).filter(Boolean);
   tags.forEach(tg=>{ if(!data.tags.includes(tg)) data.tags.push(tg); });
-  const project = $('fProject').value || null;
-  if(project && !data.projects.includes(project)) data.projects.push(project);
   const note = $('fNote').value.trim();
   const id = $('taskId').value;
   const existing = id && data.tasks.find(x=>x.id===id);   // kann inzwischen per Sync gelöscht sein
-  const fields = { name, due:$('fDue').value||null, prio:$('fPrio').value, project, tags };
+  const fields = { name, due:$('fDue').value||null, prio:$('fPrio').value, tags };
   let task = existing;
   if(existing){ Object.assign(existing, fields); }
   else{ task = { id:uid(), ...fields, done:false, doneAt:null, created:Date.now() }; data.tasks.push(task); }
   if(note) task.note=note; else delete task.note;
   const rec=parseRec($('fRec').value)?.value;
   if(rec) task.rec=rec; else delete task.rec;
+  if($('fIsQuick').checked){                                   // Schnellaufgabe: alles außer dem Text entfällt
+    Object.assign(task, { due:null, prio:'Mittel', tags:[], quick:true });
+    delete task.note; delete task.rec;
+  }else delete task.quick;
   save(); closeTask(); renderFilters(); render();
 }
 
@@ -1366,14 +1444,6 @@ function closeSettings(){ $('settingsOverlay').classList.remove('show'); }
 function openManage(){ renderManage(); $('manageOverlay').classList.add('show'); }
 function closeManage(){ $('manageOverlay').classList.remove('show'); }
 function renderManage(){
-  const pl = $('projList'); pl.innerHTML='';
-  data.projects.forEach((p)=>{
-    const row=document.createElement('div'); row.className='manage-item';
-    row.innerHTML=`<input value="${escapeAttr(p)}"><button class="iconbtn" title="Löschen">🗑️</button>`;
-    row.querySelector('input').onchange=(e)=>renameProject(p, e.target.value.trim());
-    row.querySelector('button').onclick=()=>deleteProject(p);
-    pl.appendChild(row);
-  });
   const tl = $('tagList'); tl.innerHTML='';
   data.tags.forEach(t=>{
     const row=document.createElement('div'); row.className='manage-item';
@@ -1382,22 +1452,6 @@ function renderManage(){
     row.querySelector('button').onclick=()=>deleteTag(t);
     tl.appendChild(row);
   });
-}
-function renameProject(oldN,newN){
-  if(!newN||newN===oldN){ renderManage(); return; }
-  if(data.projects.includes(newN)){ alert('Projekt existiert bereits.'); renderManage(); return; }
-  data.projects=data.projects.map(p=>p===oldN?newN:p);
-  data.tasks.forEach(t=>{ if(t.project===oldN) t.project=newN; });
-  save(); renderManage(); renderFilters(); render();
-}
-function deleteProject(p){
-  const used=data.tasks.filter(t=>t.project===p).length;
-  if(!confirm(`Projekt "${p}" löschen?`+(used?`\n${used} Aufgabe(n) bleiben erhalten, nur ohne Projekt.`:''))) return;
-  data.projects=data.projects.filter(x=>x!==p);
-  if(!data.projects.length) data.projects=['Allgemein'];
-  data.tasks.forEach(t=>{ if(t.project===p) t.project=null; });
-  activeFilters.projects.delete(p);
-  save(); renderManage(); renderFilters(); render();
 }
 function renameTag(oldT,newT){
   if(!newT||newT===oldT){ renderManage(); return; }
@@ -1441,12 +1495,12 @@ function handleImportFile(e){
       else{
         try{ const parsed=JSON.parse(content); const d=parsed.data&&parsed.data.tasks?parsed.data:parsed;
           if(!Array.isArray(d.tasks)) throw new Error('json');
-          pending={ tasks:d.tasks, projects:Array.isArray(d.projects)?d.projects:[], tags:Array.isArray(d.tags)?d.tags:[] };
+          pending=migrateProjects({ tasks:d.tasks.map(t=>({...t})), projects:Array.isArray(d.projects)?d.projects:[], tags:Array.isArray(d.tags)?d.tags.slice():[] });
         }catch(_){ pending=parseTodoTxtFile(content); }
       }
       pendingImport=pending;
       const fmt=isTxt?'todo.txt':'JSON';
-      $('importSummary').innerHTML=`Format erkannt: <b>${fmt}</b><br>Gefunden: <b>${pending.tasks.length}</b> Aufgabe(n), <b>${pending.projects.length}</b> Projekt(e), <b>${pending.tags.length}</b> Tag(s).`;
+      $('importSummary').innerHTML=`Format erkannt: <b>${fmt}</b><br>Gefunden: <b>${pending.tasks.length}</b> Aufgabe(n), <b>${pending.tags.length}</b> Tag(s).`;
       $('importMode').value='merge'; updateImportHint();
       $('importOverlay').classList.add('show');
     }catch(err){ alert('Import fehlgeschlagen: '+err.message); }
@@ -1456,8 +1510,8 @@ function handleImportFile(e){
 function updateImportHint(){
   const merge=$('importMode').value==='merge';
   $('importHint').textContent = merge
-    ? 'Beim Zusammenführen werden nur neue Aufgaben, Tags und Projekte ergänzt. Doppelte werden übersprungen.'
-    : 'Achtung: Alle aktuellen Aufgaben, Tags und Projekte werden vollständig durch die Datei ersetzt.';
+    ? 'Beim Zusammenführen werden nur neue Aufgaben und Tags ergänzt. Doppelte werden übersprungen.'
+    : 'Achtung: Alle aktuellen Aufgaben und Tags werden vollständig durch die Datei ersetzt.';
 }
 function confirmImport(){
   if(!pendingImport) return;
@@ -1465,13 +1519,11 @@ function confirmImport(){
   if(mode==='replace'){
     if(!confirm('Wirklich alle aktuellen Daten ersetzen? Das kann nicht rückgängig gemacht werden.')) return;
     data.tasks=pendingImport.tasks;
-    data.projects=pendingImport.projects.length?pendingImport.projects.slice():['Allgemein'];
     data.tags=pendingImport.tags.slice();
-    data.tasks.forEach(t=>{ if(t.project && !data.projects.includes(t.project)) data.projects.push(t.project); });
     toast(`Import abgeschlossen: ${data.tasks.length} Aufgabe(n) geladen.`);
   }else{
     // Doppelte überspringen: gleiche ID oder inhaltlich gleiche Aufgabe (todo.txt hat keine IDs)
-    const dupKey=t=>[t.name, t.due||'', t.project||'', !!t.done].join('\u0001');
+    const dupKey=t=>[t.name, t.due||'', [...(t.tags||[])].sort().join(','), !!t.done].join('\u0001');
     const existingIds=new Set(data.tasks.map(t=>t.id));
     const existingKeys=new Set(data.tasks.map(dupKey)); let added=0, skipped=0;
     pendingImport.tasks.forEach(t=>{
@@ -1479,9 +1531,7 @@ function confirmImport(){
       const nt={...t}; if(!nt.id) nt.id=uid();
       existingIds.add(nt.id); existingKeys.add(dupKey(nt)); data.tasks.push(nt); added++;
     });
-    pendingImport.projects.forEach(p=>{ if(!data.projects.includes(p)) data.projects.push(p); });
     pendingImport.tags.forEach(tg=>{ if(!data.tags.includes(tg)) data.tags.push(tg); });
-    data.tasks.forEach(t=>{ if(t.project && !data.projects.includes(t.project)) data.projects.push(t.project); });
     toast(`Import abgeschlossen: ${added} Aufgabe(n) hinzugefügt`+(skipped?`, ${skipped} doppelte übersprungen.`:'.'));
   }
   pendingImport=null; $('importOverlay').classList.remove('show');
@@ -1530,9 +1580,7 @@ function restoreFromText(text){
   if(!confirm('Alle aktuellen Aufgaben durch dieses Backup ersetzen?')) return;
   let pending; try{ pending=parseTodoTxtFile(text); }catch(err){ alert('Wiederherstellung fehlgeschlagen: '+err.message); return; }
   data.tasks=pending.tasks;
-  data.projects=pending.projects.length?pending.projects.slice():['Allgemein'];
   data.tags=pending.tags.slice();
-  data.tasks.forEach(t=>{ if(t.project && !data.projects.includes(t.project)) data.projects.push(t.project); });
   save(); renderFilters(); render(); closeBackups();
   toast('Backup wiederhergestellt.');
 }
@@ -1625,7 +1673,6 @@ function applyMerged(merged){
   snapshot=takeSnapshot(data);
   if(canon(data)===before) return;
   persist(); autoBackup();
-  activeFilters.projects.forEach(p=>{ if(!data.projects.includes(p)) activeFilters.projects.delete(p); });
   activeFilters.tags.forEach(t=>{ if(!data.tags.includes(t)) activeFilters.tags.delete(t); });
   renderFilters(); render();
   if($('manageOverlay').classList.contains('show')) renderManage();
@@ -2001,7 +2048,18 @@ $('clearRegistry').onclick = ()=>{
   setRegistry(kept); renderCleanup(); toast('Aufräum-Liste zurückgesetzt.');
 };
 $('search').oninput = e=>{ searchTerm=e.target.value; render(); };
+function togglePanel(id, btn, show){
+  const el=$(id); show = show ?? el.hidden;
+  el.hidden=!show; $(btn).classList.toggle('on', show);
+  return show;
+}
+$('searchBtn').onclick = ()=>{ if(togglePanel('searchPanel','searchBtn')) $('search').focus(); };
+$('searchClose').onclick = ()=>{ $('search').value=''; searchTerm=''; togglePanel('searchPanel','searchBtn', false); render(); };
+$('filterBtn').onclick = ()=>togglePanel('filters','filterBtn');
 $('sort').onchange = e=>{ sortBy=e.target.value; saveUi(); render(); };
+$('quickAdd').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); submitQuickAdd(); } });
+$('quickAddBtn').onclick = ()=>{ submitQuickAdd(); $('quickAdd').focus(); };
+$('fIsQuick').onchange = e=>setQuickMode(e.target.checked);
 $('deleteTaskBtn').onclick = ()=>{ const id=$('taskId').value; closeTask(); if(id) delTask(id); };
 $('themeSel').onchange = e=>{ try{ localStorage.setItem(LS_THEME, e.target.value); }catch(_){} applyTheme(); };
 $('tabActive').onclick = ()=>switchView('active');
@@ -2011,9 +2069,7 @@ $('fQuick').addEventListener('input', syncQuickToFields);
 $('fQuick').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); saveTask(); } });
 $('toggleDetails').onclick = ()=>{ const box=$('detailsBox'); box.classList.toggle('show'); $('toggleDetails').textContent=(box.classList.contains('show')?'▾':'▸')+' Details anzeigen / manuell anpassen'; };
 
-$('addProj').onclick = ()=>{ const v=$('newProj').value.trim(); if(!v) return; if(data.projects.includes(v)){ alert('Projekt existiert bereits.'); return; } data.projects.push(v); $('newProj').value=''; save(); renderManage(); renderFilters(); };
 $('addTag').onclick = ()=>{ const v=$('newTag').value.trim(); if(!v) return; if(data.tags.includes(v)){ alert('Tag existiert bereits.'); return; } data.tags.push(v); $('newTag').value=''; save(); renderManage(); renderFilters(); };
-$('newProj').addEventListener('keydown',e=>{ if(e.key==='Enter') $('addProj').click(); });
 $('newTag').addEventListener('keydown',e=>{ if(e.key==='Enter') $('addTag').click(); });
 $('fName').addEventListener('keydown',e=>{ if(e.key==='Enter') saveTask(); });
 
@@ -2070,7 +2126,8 @@ if(IS_NATIVE){
     const open=OVERLAYS.find(id=>$(id).classList.contains('show'));
     if(open) $(open).classList.remove('show'); else Native.App.minimizeApp();
   });
-  Native.App.addListener('appStateChange', ({ isActive })=>{ if(isActive){ scheduleSync(300); scheduleAutoDownload(); checkUpdate(); pollNcLogin(); } });
+  Native.App.addListener('appStateChange', ({ isActive })=>{ if(isActive){ importQuickInbox(); scheduleSync(300); scheduleAutoDownload(); checkUpdate(); pollNcLogin(); } });
+  importQuickInbox();
   $('updateBtn').onclick = ()=>{ availableUpdate() ? downloadUpdate() : checkUpdate(true); };
   Native.App.getInfo().then(info=>{ appVersion=info.version||''; renderUpdate(); setTimeout(()=>checkUpdate(), 3000); }).catch(()=>{});
 }
@@ -2103,11 +2160,26 @@ window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferredP
 $('installBtn').onclick = async ()=>{ if(!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; $('installGroup').style.display='none'; };
 window.addEventListener('appinstalled',()=>{ $('installGroup').style.display='none'; toast('App wurde installiert. 🎉'); });
 
+/* ---------- Verknüpfung „Neue Aufgabe“ und Teilen (installierte Web-App) ----------
+   ?neu → Eingabezeile fokussieren; ?title/text/url (Teilen-Ziel) → Text vorbelegen */
+function handleLaunchParams(){
+  const q=new URLSearchParams(location.search);
+  if(!['neu','title','text','url'].some(k=>q.has(k))) return;
+  const shared=[q.get('title'), q.get('text'), q.get('url')].filter(Boolean)
+    .filter((v,i,a)=>a.indexOf(v)===i && !a.some(w=>w.length>v.length && w.includes(v)))   // doppelte Teile weglassen
+    .join(' ').replace(/\s+/g,' ').trim();
+  history.replaceState(null, '', location.pathname);
+  switchView('active');
+  if(shared) $('quickAdd').value=shared;
+  setTimeout(()=>$('quickAdd').focus(), 100);
+}
+
 /* ---------- Init ---------- */
 applyTheme();
 $('sort').value=sortBy;
 switchView(view);
 renderFilters();
+handleLaunchParams();
 autoBackup();
 setInterval(autoBackup, 5*60*1000);
 scheduleAutoDownload();

@@ -5,19 +5,22 @@ Gerät (Local Storage) – kein Konto, kein Tracking. Optional lassen sie sich �
 **eigene Nextcloud** zwischen mehreren Geräten synchronisieren.
 
 ## Features
-- Aufgaben mit Name, Fälligkeitsdatum, Priorität, Tags, Projekt (optional) und Notiz
+- Aufgaben mit Name, Fälligkeitsdatum, Priorität, Tags (mehrere pro Aufgabe) und Notiz –
+  Projekte gibt es nicht mehr, sie wurden automatisch zu Tags
+- **⚡ Schnellaufgaben**: Eingabezeile oben in der Liste – reiner Text wird eine kompakte
+  Schnellaufgabe (nur Text, eigener Abschnitt oben); mit Datum/Tag/Priorität eine normale Aufgabe
 - **Schnelleingabe** im todo.txt-Stil (siehe unten)
 - Nach Fälligkeit **gruppiert**: Überfällig · Heute · Morgen · Nächste 7 Tage · Später · Ohne Datum,
   mit relativen Angaben („heute“, „morgen“, „seit 2 Tagen“)
 - Sortieren nach Fälligkeit / Priorität / Name / Erstelldatum (bei Gleichstand nach Priorität bzw. Datum)
-- Filtern nach Tags & Projekten, Live-Suche (auch in Notizen); Ansicht und Filter bleiben gespeichert
+- Filtern nach Tags, Live-Suche (auch in Notizen); Ansicht und Filter bleiben gespeichert
 - Antippen öffnet eine Aufgabe zum Bearbeiten
 - Auf dem Handy **wischen**: nach rechts = erledigt, nach links = löschen
 - Löschen und Abhaken lassen sich per **„Rückgängig“** zurücknehmen
 - **Wiederkehrende Aufgaben** (täglich, wöchentlich, monatlich …): beim Abhaken entsteht die nächste
 - **Verschieben**: Fälligkeitsdatum antippen → Heute, Morgen, Nächsten Montag, In 1 Woche, Datum wählen;
   bei überfälligen Aufgaben „Alle auf heute“
-- Tags und Projekte bearbeiten/löschen
+- Tags bearbeiten/löschen
 - **Helles und dunkles Design** (automatisch nach Systemeinstellung oder fest wählbar)
 - Zurück-Taste schließt offene Dialoge
 - **Export/Import** als JSON-Backup oder todo.txt
@@ -84,7 +87,22 @@ ein paar Vorteile mit:
   alte Dateien werden nach Ablauf der Aufbewahrung automatisch gelöscht. Exporte laufen über
   das Android-**Teilen**-Menü (z. B. in Dateien, Nextcloud oder E-Mail).
 - **Zurück-Taste** schließt offene Dialoge, statt die App zu beenden.
+- **Schnell hinzufügen, ohne die App zu öffnen** – ein kleiner Eingabedialog über jeder App:
+  - **App-Verknüpfung**: lange auf das App-Icon drücken → „Neue Aufgabe“ (lässt sich auch als
+    eigenes Icon auf den Homescreen ziehen)
+  - **Schnelleinstellungen-Kachel** „＋ Aufgabe“: Statusleiste herunterziehen → Stift-Symbol →
+    Kachel in die Liste ziehen
+  - **Widget** für den Homescreen: zeigt ⚡ Schnellaufgaben, überfällige und heutige Aufgaben –
+    Kreis antippen = erledigt, Text antippen = App öffnen, „＋“ = neue Aufgabe. Das Widget zeigt
+    den Stand vom letzten Öffnen der App; im Widget Erledigtes übernimmt die App beim nächsten Öffnen.
+  - **Teilen**: in einer anderen App Text oder Link teilen → „Neue Aufgabe“
+
+  Reiner Text wird eine Schnellaufgabe; Syntax wie `morgen`, `#tag`, `(A)` funktioniert wie in
+  der App. Die Aufgabe erscheint (und synchronisiert) beim nächsten Öffnen der App.
 - Synchronisiert automatisch, sobald die App wieder in den Vordergrund kommt.
+
+Auch die installierte Browser-Version hat die Verknüpfung „Neue Aufgabe“ (Rechtsklick bzw.
+langes Drücken auf das Icon) und ist unter Android ein Ziel für „Teilen“.
 
 Die App-Daten sind von der Browser-/PWA-Version getrennt. Zum Umziehen den Nextcloud-Sync
 auf beiden einrichten oder per Export/Import übertragen.
@@ -179,12 +197,11 @@ Bei größeren Änderungen die Zahl erhöhen (z. B. `aufgaben-v2`), damit Client
 
 ## ⌨️ Schnelleingabe
 Beim Anlegen einfach alles in eine Zeile schreiben, z. B.
-`Steuer machen +Büro @wichtig freitag (A)`. Die Vorschau zeigt sofort, was erkannt wurde.
+`Steuer machen #büro #wichtig freitag (A)`. Die Vorschau zeigt sofort, was erkannt wurde.
 
 | Eingabe | Bedeutung |
 |---|---|
-| `+Projekt` | Projekt (wie in todo.txt) |
-| `@tag` oder `#tag` | Tag, mehrfach möglich |
+| `#tag` (auch `@tag`, `+tag`) | Tag, mehrfach möglich – `+Projekt` aus todo.txt wird ebenfalls zum Tag |
 | `(A)` / `(B)` / `(C)` | Priorität Hoch / Mittel / Niedrig |
 | `heute`, `morgen`, `übermorgen` | Fälligkeit |
 | `montag` … `sonntag` | nächster dieser Wochentag |

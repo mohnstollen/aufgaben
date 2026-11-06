@@ -130,3 +130,44 @@ test('Import „Zusammenführen“ überspringt doppelte Aufgaben', async ({ bro
   });
   expect(count).toBe(1);
 });
+
+test('Archiv: Erledigte älter als 12 Monate wandern in archiv-JAHR.json – auf allen Geräten', async ({ browser }) => {
+  dav = await startDav();
+  const year = d => new Date(d).getFullYear();
+  const old1 = Date.now() - 400 * 86400000, old2 = Date.now() - 800 * 86400000, recent = Date.now() - 10 * 86400000;
+  const A = await openApp(browser, { data: { projects: [], tags: [], tasks: [
+    task('o1', 'Alt erledigt', { done: true, doneAt: old1 }),
+    task('o2', 'Uralt erledigt', { done: true, doneAt: old2 }),
+    task('r1', 'Kürzlich erledigt', { done: true, doneAt: recent }),
+    task('a1', 'Offen (alt angelegt)', { created: old2 })] } });
+  const B = await openApp(browser);
+  await configureSync(A.page, dav); await configureSync(B.page, dav);
+  await syncNow(B.page);                                       // B kennt zunächst nichts
+  await syncNow(A.page);
+  await expect(A.page.locator('#toastMsg')).toHaveText('2 erledigte Aufgabe(n), älter als 12 Monate, ins Archiv verschoben');
+  expect(await names(A.page)).toEqual(['Kürzlich erledigt ✓', 'Offen (alt angelegt)']);
+  const arch1 = dav.json(`Aufgaben/archiv-${year(old1)}.json`), arch2 = dav.json(`Aufgaben/archiv-${year(old2)}.json`);
+  expect(arch1.tasks.map(t => t.name)).toContain('Alt erledigt');
+  expect(arch2.tasks.map(t => t.name)).toContain('Uralt erledigt');
+  await syncNow(A.page);                                       // Entfernung erreicht die Sync-Datei
+  expect(dav.names()).toEqual(['Kürzlich erledigt', 'Offen (alt angelegt)']);
+  await syncNow(B.page);
+  expect(await names(B.page)).toEqual(['Kürzlich erledigt ✓', 'Offen (alt angelegt)']);
+  // erneuter Sync legt nichts doppelt ins Archiv
+  await syncNow(A.page);
+  expect(dav.json(`Aufgaben/archiv-${year(old1)}.json`).tasks.filter(t => t.id === 'o1').length).toBe(1);
+  await A.page.click('#tabArchive');
+  await expect(A.page.locator('#list .hint')).toContainText('archiv-JAHR.json');
+});
+
+test('Archiv: bestehende Archivdatei wird ergänzt, nicht überschrieben', async ({ browser }) => {
+  dav = await startDav();
+  const old = Date.now() - 400 * 86400000, y = new Date(old).getFullYear();
+  const A = await openApp(browser, { data: { projects: [], tags: [], tasks: [task('n1', 'Neu archiviert', { done: true, doneAt: old })] } });
+  await configureSync(A.page, dav);
+  await syncNow(A.page);                                       // legt Ordner + Archiv an
+  const B = await openApp(browser, { data: { projects: [], tags: [], tasks: [task('n2', 'Von B archiviert', { done: true, doneAt: old })] } });
+  await configureSync(B.page, dav);
+  await syncNow(B.page);
+  expect(dav.json(`Aufgaben/archiv-${y}.json`).tasks.map(t => t.name).sort()).toEqual(['Neu archiviert', 'Von B archiviert']);
+});

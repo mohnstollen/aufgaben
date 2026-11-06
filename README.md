@@ -249,6 +249,9 @@ Benutzerkonto nehmen, nicht das Admin-Konto.
 - Offline geht nichts verloren: Änderungen werden beim nächsten Sync übertragen.
 - Konflikte: Pro Aufgabe gewinnt die zuletzt geänderte Version. Ändern zwei Geräte **dieselbe**
   Aufgabe, bevor sie synchronisiert haben, setzt sich die spätere Änderung vollständig durch.
+- **Archiv:** Erledigte Aufgaben, die älter als 12 Monate sind, wandern beim Sync in eine
+  Jahresdatei neben der Sync-Datei (z. B. `Aufgaben/archiv-2025.json`) und verschwinden aus der
+  Liste. So bleibt die Sync-Datei dauerhaft klein; nichts geht verloren.
 - Gelöschte Aufgaben werden 180 Tage lang als „gelöscht" vermerkt, damit sie nicht von einem
   anderen Gerät wieder auftauchen.
 - Optional legt die App zusätzlich eine `todo.txt` im selben Ordner ab (nur Export, wird
@@ -257,6 +260,13 @@ Benutzerkonto nehmen, nicht das Admin-Konto.
 - Zugangsdaten liegen nur im Local Storage des jeweiligen Geräts.
 - Die Nextcloud muss per **https://** erreichbar sein: Eine HTTPS-Seite darf keine
   unverschlüsselten Adressen aufrufen.
+
+## 💾 Speicher
+Die Aufgabenliste liegt im lokalen Speicher des Browsers bzw. der App (Platz für weit über
+10.000 Aufgaben). Die täglichen Snapshots liegen in IndexedDB, wo praktisch unbegrenzt Platz ist.
+Ein neuer Snapshot entsteht nur, wenn sich etwas geändert hat. Wird der lokale Speicher
+trotzdem einmal knapp, zeigt die App eine deutliche Warnung. Wie viel belegt ist, steht unter
+⚙️ → Backups.
 
 ## 💾 Datensicherung
 Ohne Sync liegen die Daten pro Gerät/Browser. Zum Übertragen dann den **Export/Import** nutzen.

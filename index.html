@@ -1164,6 +1164,13 @@ function render(){
   }else{
     items.forEach(t=>listEl.appendChild(taskCard(t)));
   }
+  if(view==='archive'){
+    const hint=document.createElement('p'); hint.className='hint'; hint.style.cssText='font-size:12px; text-align:center; margin:14px 0 0';
+    hint.textContent = syncConfigured()
+      ? 'Erledigte Aufgaben, die älter als 12 Monate sind, wandern beim Sync in die Nextcloud (archiv-JAHR.json neben der Sync-Datei).'
+      : 'Mit Nextcloud-Sync wandern erledigte Aufgaben nach 12 Monaten automatisch in eine Archivdatei.';
+    listEl.appendChild(hint);
+  }
 }
 function taskCard(t){
   const wrap = document.createElement('div');
@@ -1734,6 +1741,48 @@ function applyMerged(merged){
   if($('manageOverlay').classList.contains('show')) renderManage();
 }
 
+/* Archiv: Erledigte Aufgaben, die älter als 12 Monate sind, wandern beim Sync in eine Jahresdatei
+   neben der Sync-Datei (z. B. Aufgaben/archiv-2025.json) und verschwinden danach aus der Aufgabenliste.
+   So bleibt die Hauptdatei dauerhaft klein, und nichts geht verloren. */
+const ARCHIVE_AFTER_DAYS = 365;
+async function archiveOldTasks(cfg, segs){
+  const limit=Date.now()-ARCHIVE_AFTER_DAYS*86400000;
+  const old=data.tasks.filter(t=>t.done && t.doneAt && t.doneAt<limit);
+  if(!old.length) return 0;
+  const byYear={};
+  old.forEach(t=>{ (byYear[new Date(t.doneAt).getFullYear()] ||= []).push(t); });
+  const archived=[];
+  for(const [year, tasks] of Object.entries(byYear)){
+    const name=`archiv-${year}.json`, fsegs=[...segs.slice(0,-1), name];
+    for(let attempt=0; attempt<3; attempt++){
+      const r=await dav(cfg, 'GET', fsegs, IS_NATIVE ? { headers:{ 'Accept-Encoding':'identity' } } : {});
+      let file={ app:'Aufgabenverwaltung', kind:'archiv', year:+year, tasks:[] }, etag=null;
+      if(r.status===200){
+        etag=syncEtag(r.headers);
+        const text=await r.text();
+        if(text.trim()){
+          file=JSON.parse(text);
+          if(!Array.isArray(file.tasks)) throw new SyncError(`${name} hat ein unbekanntes Format und wird nicht überschrieben.`);
+        }
+      }else if(r.status!==404) throw new SyncError(`${name} konnte nicht geladen werden (Fehler ${r.status}).`);
+      const ids=new Set(file.tasks.map(t=>t.id));
+      tasks.forEach(t=>{ if(!ids.has(t.id)) file.tasks.push(t); });
+      file.updatedAt=new Date().toISOString();
+      const put=await davPut(cfg, fsegs, JSON.stringify(file), 'application/json', etag);
+      if(put.status===412) continue;                                   // zwischendurch geändert → neu laden
+      if(!put.ok) throw new SyncError(`${name} konnte nicht gespeichert werden (Fehler ${put.status}).`);
+      archived.push(...tasks);
+      break;
+    }
+  }
+  if(!archived.length) return 0;
+  // erst nach erfolgreichem Schreiben entfernen; die Löschung erreicht andere Geräte wie jede andere
+  const ids=new Set(archived.map(t=>t.id));
+  data.tasks=data.tasks.filter(t=>!ids.has(t.id));
+  save(); renderFilters(); render();
+  return archived.length;
+}
+
 async function syncNow({ manual=false }={}){
   const cfg=getSyncCfg(); if(!syncConfigured(cfg)) return;
   if(syncState.running){ syncState.again=true; return; }
@@ -1776,9 +1825,12 @@ async function syncNow({ manual=false }={}){
         else updateSyncCfg({ lastTodoTxt:txt });
       }
     }
+    let archived=0;
+    try{ archived=await archiveOldTasks(cfg, segs); }catch(e){ console.warn('Archivieren fehlgeschlagen – nächster Versuch beim nächsten Sync:', e); }
     updateSyncCfg({ lastSync:Date.now(), lastError:null });
     setSyncStatus('ok');
-    if(manual) toast('Mit Nextcloud synchronisiert ✔');
+    if(archived) toast(`${archived} erledigte Aufgabe(n), älter als 12 Monate, ins Archiv verschoben`);
+    else if(manual) toast('Mit Nextcloud synchronisiert ✔');
   }catch(e){
     const msg=e instanceof SyncError ? e.message : 'Sync fehlgeschlagen: '+e.message;
     if(!e.offline) updateSyncCfg({ lastError:msg });

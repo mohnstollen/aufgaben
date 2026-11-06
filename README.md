@@ -249,6 +249,9 @@ Benutzerkonto nehmen, nicht das Admin-Konto.
 - Offline geht nichts verloren: Änderungen werden beim nächsten Sync übertragen.
 - Konflikte: Pro Aufgabe gewinnt die zuletzt geänderte Version. Ändern zwei Geräte **dieselbe**
   Aufgabe, bevor sie synchronisiert haben, setzt sich die spätere Änderung vollständig durch.
+- **Archiv:** Erledigte Aufgaben, die älter als 12 Monate sind, wandern beim Sync in eine
+  Jahresdatei neben der Sync-Datei (z. B. `Aufgaben/archiv-2025.json`) und verschwinden aus der
+  Liste. So bleibt die Sync-Datei dauerhaft klein; nichts geht verloren.
 - Gelöschte Aufgaben werden 180 Tage lang als „gelöscht" vermerkt, damit sie nicht von einem
   anderen Gerät wieder auftauchen.
 - Optional legt die App zusätzlich eine `todo.txt` im selben Ordner ab (nur Export, wird

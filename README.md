@@ -258,6 +258,13 @@ Benutzerkonto nehmen, nicht das Admin-Konto.
 - Die Nextcloud muss per **https://** erreichbar sein: Eine HTTPS-Seite darf keine
   unverschlüsselten Adressen aufrufen.
 
+## 💾 Speicher
+Die Aufgabenliste liegt im lokalen Speicher des Browsers bzw. der App (Platz für weit über
+10.000 Aufgaben). Die täglichen Snapshots liegen in IndexedDB, wo praktisch unbegrenzt Platz ist.
+Ein neuer Snapshot entsteht nur, wenn sich etwas geändert hat. Wird der lokale Speicher
+trotzdem einmal knapp, zeigt die App eine deutliche Warnung. Wie viel belegt ist, steht unter
+⚙️ → Backups.
+
 ## 💾 Datensicherung
 Ohne Sync liegen die Daten pro Gerät/Browser. Zum Übertragen dann den **Export/Import** nutzen.
 Beim Zusammenführen werden doppelte Aufgaben übersprungen.

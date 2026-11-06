@@ -291,6 +291,8 @@
   .sync-pill.err{color:var(--c-red); border-color:var(--c-red)}
   .sync-pill.off, .sync-pill.locked{color:var(--c-amber)}
   .native .web-only{display:none}
+  .storage-warn{background:var(--c-red-bg); color:var(--c-red); border:1px solid var(--c-red); border-radius:12px;
+    padding:10px 12px; font-size:13px; margin-bottom:10px; line-height:1.45}
   .login-row{display:flex; gap:8px; margin-top:10px}
   .login-row .btn{flex:1; justify-content:center; display:flex; align-items:center; gap:6px}
   #qrOverlay{z-index:45}   /* liegt über dem Sync-Dialog, aus dem er geöffnet wird */
@@ -338,6 +340,10 @@
     <button type="button" class="qa-btn" id="quickAddBtn" aria-label="Hinzufügen">+</button>
   </div>
 
+  <div class="storage-warn" id="storageWarn" role="alert" hidden>
+    ⚠️ <b>Speicher auf diesem Gerät ist voll</b> – Änderungen werden hier gerade nicht gespeichert und gehen beim Schließen verloren
+    (mit Nextcloud-Sync sind sie dort gesichert). Unter ⚙️ → Backups die Aufbewahrung verkürzen oder erledigte Aufgaben löschen.
+  </div>
   <div class="list" id="list"></div>
 </div>
 
@@ -590,8 +596,10 @@
 
     <div class="manage-group">
       <h3>Interne Snapshots</h3>
-      <p class="hint" style="font-size:12px; margin:0 0 8px">Bei jeder Änderung im lokalen Speicher gesichert. Herunterladen ⬇️ oder wiederherstellen ♻️.</p>
+      <p class="hint" style="font-size:12px; margin:0 0 8px">Ein Stand pro Tag mit Änderungen. Herunterladen ⬇️ oder wiederherstellen ♻️.
+        Mit Nextcloud-Sync hebt Nextcloud zusätzlich alte Versionen der Sync-Datei auf (Datei → Versionen).</p>
       <div id="backupList"></div>
+      <p class="hint" id="storageInfo" style="font-size:12px; margin:10px 0 0"></p>
     </div>
 
     <div class="modal-actions">
@@ -666,6 +674,7 @@
 <script>
 /* ---------- Storage keys ---------- */
 const LS_KEY = 'taskmanager_v1';
+// Früher lagen hier Snapshots im Local Storage – nur noch für die einmalige Übernahme nach IndexedDB
 const LS_TXT = 'taskmanager_todotxt';
 const LS_TXT_HIST = 'taskmanager_todotxt_history';
 const LS_AUTODL = 'taskmanager_autodl';
@@ -712,7 +721,18 @@ function migrateProjects(d){
   d.tasks.forEach(t=>(t.tags||[]).forEach(tg=>{ if(!d.tags.includes(tg)) d.tags.push(tg); }));
   return d;
 }
-function persist(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); }
+/* Local Storage fasst nur ≈ 5 Mio. Zeichen. Schlägt das Speichern fehl, deutlich warnen statt still Daten zu verlieren. */
+let storageFull=false;
+function persist(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(data)); setStorageFull(false); }
+  catch(e){ console.error('Speichern fehlgeschlagen:', e); setStorageFull(true); }
+}
+function setStorageFull(full){
+  if(full===storageFull) return;
+  storageFull=full;
+  const el=document.getElementById('storageWarn'); if(el) el.hidden=!full;
+  if(full && typeof toast==='function') toast('⚠️ Speicher voll – Änderungen werden auf diesem Gerät nicht gespeichert');
+}
 function save(){ migrateProjects(data); trackChanges(); persist(); autoBackup(); scheduleSync(); }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
@@ -925,19 +945,46 @@ function parseTodoTxtFile(content){
 }
 
 /* ---------- Interne Snapshots ---------- */
-function autoBackup(){
+/* Tägliche todo.txt-Snapshots belegen den meisten Platz. Sie liegen deshalb in IndexedDB (praktisch
+   unbegrenzt), nicht im Local Storage – dort bleibt nur die Aufgabenliste selbst. */
+const IDB_NAME='aufgaben', IDB_STORE='snapshots';
+let idbPromise=null;
+const reqDone = r=>new Promise((ok, fail)=>{ r.onsuccess=()=>ok(r.result); r.onerror=()=>fail(r.error); });
+const txDone = tx=>new Promise((ok, fail)=>{ tx.oncomplete=()=>ok(); tx.onerror=tx.onabort=()=>fail(tx.error); });
+function idb(){
+  return idbPromise ||= new Promise((ok, fail)=>{
+    if(!window.indexedDB) return fail(new Error('IndexedDB nicht verfügbar'));
+    const r=indexedDB.open(IDB_NAME, 1);
+    r.onupgradeneeded=()=>r.result.createObjectStore(IDB_STORE, { keyPath:'date' });
+    r.onsuccess=()=>ok(r.result); r.onerror=()=>fail(r.error);
+  });
+}
+async function snapAll(){ const db=await idb(); return reqDone(db.transaction(IDB_STORE).objectStore(IDB_STORE).getAll()); }   // nach Datum sortiert
+async function snapWrite(put=[], del=[]){
+  const db=await idb(); const tx=db.transaction(IDB_STORE, 'readwrite'), st=tx.objectStore(IDB_STORE);
+  put.forEach(h=>st.put(h)); del.forEach(d=>st.delete(d));
+  return txDone(tx);
+}
+async function pruneSnapshots(){
+  const all=await snapAll(), keep=new Set(pruneByRetention(all));
+  const del=all.filter(h=>!keep.has(h)).map(h=>h.date);
+  if(del.length) await snapWrite([], del);
+}
+/* Einmalig: Snapshots früherer Versionen aus dem Local Storage übernehmen und dort entfernen */
+async function migrateSnapshots(){
+  let hist=null; try{ hist=JSON.parse(localStorage.getItem(LS_TXT_HIST)); }catch(_){}
+  if(Array.isArray(hist) && hist.length) await snapWrite(hist.filter(h=>h && h.date && typeof h.text==='string'));
+  localStorage.removeItem(LS_TXT_HIST); localStorage.removeItem(LS_TXT);
+}
+let lastSnapText=null;
+async function autoBackup(){
+  const text=buildTodoTxt();
+  if(text===lastSnapText) return;                                    // nur bei Änderungen
   try{
-    const text = buildTodoTxt();
-    const stamp = new Date().toISOString();
-    localStorage.setItem(LS_TXT, JSON.stringify({ updatedAt:stamp, text }));
-    const dayKey = stamp.slice(0,10);
-    let hist=[]; try{ hist = JSON.parse(localStorage.getItem(LS_TXT_HIST))||[]; }catch(e){}
-    const existing = hist.find(h=>h.date===dayKey);
-    if(existing){ existing.text=text; existing.updatedAt=stamp; }
-    else { hist.push({ date:dayKey, updatedAt:stamp, text }); }
-    hist = pruneByRetention(hist);
-    localStorage.setItem(LS_TXT_HIST, JSON.stringify(hist));
-  }catch(e){ console.warn('Auto-Backup fehlgeschlagen:', e); }
+    await snapWrite([{ date:toDateStr(Date.now()), updatedAt:new Date().toISOString(), text }]);
+    lastSnapText=text;
+    await pruneSnapshots();
+  }catch(e){ console.warn('Snapshot fehlgeschlagen:', e); }
 }
 function pruneByRetention(hist){
   const keepDays = getRetention();
@@ -1546,9 +1593,18 @@ function openBackups(){
   $('backupOverlay').classList.add('show');
 }
 function closeBackups(){ $('backupOverlay').classList.remove('show'); }
-function renderBackups(){
+const fmtSize = n => n>=1e6 ? (n/1e6).toLocaleString('de-DE',{maximumFractionDigits:1})+' MB' : Math.max(1,Math.round(n/1e3))+' KB';
+async function renderStorageInfo(){
+  const chars=(localStorage.getItem(LS_KEY)||'').length;
+  let txt=`Aufgabenliste: ${data.tasks.length} Aufgaben, ${fmtSize(chars)} – ${Math.max(1,Math.round(chars/5e6*100))} % des Platzes im lokalen Speicher.`;
+  try{ const est=await navigator.storage?.estimate?.(); if(est?.usage) txt+=` Insgesamt belegt die App ${fmtSize(est.usage)}.`; }catch(_){}
+  $('storageInfo').textContent=txt;
+}
+async function renderBackups(){
   const wrap=$('backupList');
-  let hist=[]; try{ hist=JSON.parse(localStorage.getItem(LS_TXT_HIST))||[]; }catch(e){}
+  renderStorageInfo();
+  let hist;
+  try{ hist=await snapAll(); }catch(e){ wrap.innerHTML='<div class="hint">Snapshots sind in diesem Browser nicht verfügbar.</div>'; return; }
   if(!hist.length){ wrap.innerHTML='<div class="hint">Noch keine Snapshots vorhanden. Sie entstehen automatisch bei der ersten Änderung.</div>'; return; }
   wrap.innerHTML='';
   hist.slice().reverse().forEach(h=>{
@@ -2034,10 +2090,9 @@ $('autoDlToggle').onchange = (e)=>{
   if(cfg.enabled){ toast('Tägliches Auto-Backup aktiviert.'); scheduleAutoDownload(); }
   else{ toast('Tägliches Auto-Backup deaktiviert.'); }
 };
-$('retentionSel').onchange = (e)=>{
+$('retentionSel').onchange = async (e)=>{
   setRetention(parseInt(e.target.value,10));
-  let hist=[]; try{ hist=JSON.parse(localStorage.getItem(LS_TXT_HIST))||[]; }catch(_){}
-  localStorage.setItem(LS_TXT_HIST, JSON.stringify(pruneByRetention(hist)));
+  await pruneSnapshots().catch(()=>{});
   renderBackups(); renderCleanup();
   toast(`Aufbewahrung: ${getRetention()} Tage.`);
 };
@@ -2180,8 +2235,11 @@ $('sort').value=sortBy;
 switchView(view);
 renderFilters();
 handleLaunchParams();
-autoBackup();
+migrateSnapshots().catch(e=>console.warn('Snapshot-Übernahme fehlgeschlagen:', e)).finally(autoBackup);
 setInterval(autoBackup, 5*60*1000);
+// Installierte App/Android: dauerhaften Speicher anfordern, damit der Browser bei Platzmangel nichts löscht
+if(navigator.storage?.persist && (IS_NATIVE || matchMedia('(display-mode: standalone)').matches))
+  navigator.storage.persisted().then(p=>{ if(!p) navigator.storage.persist(); }).catch(()=>{});
 scheduleAutoDownload();
 setSyncStatus('ok');
 scheduleSync(500);

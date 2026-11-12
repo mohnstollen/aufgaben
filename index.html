@@ -1317,17 +1317,15 @@ async function importQuickInbox(){
   if(msgs.length) toast(msgs.join(' · '));
 }
 
-/* Android-Widget: Schnellaufgaben, überfällige und heutige Aufgaben – nur senden, wenn sich etwas geändert hat */
+/* Android-Widget: Schnellaufgaben und Aufgaben mit Fälligkeit bis in 7 Tagen. Was davon heute bzw. überfällig ist,
+   rechnet das Widget selbst nach dem aktuellen Datum aus – so stimmt es auch, wenn die App tagelang nicht geöffnet wird. */
 let lastWidgetData='';
 function widgetPayload(){
-  const open=data.tasks.filter(t=>!t.done);
-  const kindOf=t=> t.quick ? 'quick' : !t.due ? null : dayDiff(t.due)<0 ? 'overdue' : dayDiff(t.due)===0 ? 'today' : null;
-  const order={ quick:0, overdue:1, today:2 };
-  const items=open.map(t=>({ t, k:kindOf(t) })).filter(x=>x.k)
-    .sort((a,b)=>order[a.k]-order[b.k] || (a.k==='quick' ? a.t.created-b.t.created : cmpDue(a.t,b.t)||cmpPrio(a.t,b.t)))
-    .slice(0, 60)
-    .map(({ t, k })=>({ id:t.id, name:t.name, kind:k,
-      label: k==='quick' ? '⚡ Schnell' : (k==='overdue' ? 'Überfällig · '+relDue(t.due) : 'Heute') + (t.prio==='Hoch' ? ' · 🔴 Hoch' : '') }));
+  const open=data.tasks.filter(t=>!t.done), horizon=addDays(7);
+  const items=open.filter(t=>t.quick || (t.due && t.due<=horizon))
+    .sort((a,b)=>(b.quick?1:0)-(a.quick?1:0) || cmpDue(a,b) || a.created-b.created)
+    .slice(0, 100)
+    .map(t=>({ id:t.id, name:t.name, quick:!!t.quick, due:t.quick ? null : t.due, high:t.prio==='Hoch', created:t.created }));
   return JSON.stringify({ open:open.length, items });
 }
 function pushWidget(){

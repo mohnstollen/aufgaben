@@ -53,7 +53,7 @@ export const addTask = (page, name, extra = {}) => page.evaluate(([name, extra])
  */
 function nativeMock({ version = '1.1.0', files = {}, inbox = [], done = [] } = {}) {
   const log = [], fs = { ...files }, listeners = {};
-  window.__native = { log, fs, fire: (ev, arg) => listeners[ev] && listeners[ev](arg) };
+  window.__native = { log, fs, scheduled: {}, fire: (ev, arg) => listeners[ev] && listeners[ev](arg) };
   window.Capacitor = { isNativePlatform: () => true, Plugins: {
     WebDav: { request: async ({ url, method, body, headers }) => {
       log.push(`dav ${method} ${decodeURIComponent(url.replace(/^.*\/files\/[^/]+\//, ''))}`);
@@ -73,5 +73,14 @@ function nativeMock({ version = '1.1.0', files = {}, inbox = [], done = [] } = {
     Browser: { open: async o => { log.push(`browser ${o.url}`); }, close: async () => { throw new Error('nur iOS'); } },
     QuickInbox: { take: async () => { const items = inbox.splice(0), d = done.splice(0); log.push(`inbox ${items.length}`); return { items, done: d }; } },
     Widget: { update: async o => { window.__native.widget = JSON.parse(o.data); log.push('widget'); } },
+    LocalNotifications: {
+      requestPermissions: async () => ({ display: 'granted' }),
+      checkExactNotificationSetting: async () => ({ exact_alarm: 'granted' }),
+      changeExactNotificationSetting: async () => ({ exact_alarm: 'granted' }),
+      registerActionTypes: async () => { log.push('actions'); },
+      addListener: (ev, cb) => { listeners['ln:' + ev] = cb; },
+      schedule: async o => { o.notifications.forEach(n => { window.__native.scheduled[n.id] = n; log.push(`schedule ${n.extra.taskId} ${n.schedule.at.toISOString()}`); }); },
+      cancel: async o => { o.notifications.forEach(n => { delete window.__native.scheduled[n.id]; log.push(`cancel ${n.id}`); }); },
+    },
   } };
 }

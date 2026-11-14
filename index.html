@@ -637,9 +637,29 @@
       </div>
     </div>
     <div class="field">
-      <label>Datei in der Nextcloud</label>
-      <input type="text" id="syncPath" placeholder="Aufgaben/aufgaben.json" autocapitalize="off">
-      <div class="hint">Fehlende Ordner werden angelegt. Alle Geräte müssen dieselbe Datei verwenden.</div>
+      <div class="switch-row">
+        <span class="lbl">Über eine <b>Sync-Datei</b> abgleichen<br><small class="hint">zwischen Geräten mit dieser App</small></span>
+        <label class="switch"><input type="checkbox" id="syncFile" checked><span class="slider"></span></label>
+      </div>
+      <div id="syncFileBox" style="margin-top:8px">
+        <input type="text" id="syncPath" placeholder="Aufgaben/aufgaben.json" autocapitalize="off" aria-label="Datei in der Nextcloud">
+        <div class="hint">Fehlende Ordner werden angelegt. Alle Geräte müssen dieselbe Datei verwenden.</div>
+      </div>
+    </div>
+    <div class="field">
+      <div class="switch-row">
+        <span class="lbl">Mit <b>Nextcloud Tasks</b> abgleichen<br><small class="hint">Aufgaben in der Nextcloud ansehen, abhaken und anlegen</small></span>
+        <label class="switch"><input type="checkbox" id="syncTasks"><span class="slider"></span></label>
+      </div>
+      <div id="syncTasksBox" style="display:none; margin-top:8px">
+        <div class="row2" style="align-items:center">
+          <select id="syncTasksCal" aria-label="Aufgabenliste" style="flex:1; min-width:0"></select>
+          <button type="button" class="btn ghost" id="syncTasksLoad" style="flex:none">Listen laden</button>
+        </div>
+        <div class="hint">Jede Aufgabe erscheint in der gewählten Liste der Nextcloud-App „Tasks“ (und in anderen CalDAV-Apps).
+          Änderungen gehen in beide Richtungen. Tags werden zu Kategorien; Erledigtes, das älter als 30 Tage ist, wird nicht mehr hochgeladen.
+          <span class="web-only"><br>Im Browser klappt das nur, wenn die Nextcloud Kalender-Zugriffe (CalDAV) von dieser Seite erlaubt – in der Android-App immer.</span></div>
+      </div>
     </div>
     <div class="field">
       <div class="switch-row">
@@ -1255,7 +1275,11 @@ function attachSwipe(wrap, card, t){
    damit zwei Geräte, die dieselbe Aufgabe erledigen, beim Sync nicht zwei Folgeaufgaben erzeugen. */
 function setDone(t, done){
   t.done=done; t.doneAt=done?Date.now():null;
-  if(!done || !parseRec(t.rec)) return null;
+  return done ? spawnNext(t) : null;
+}
+/* Wiederkehrende Aufgabe erledigt → nächste anlegen */
+function spawnNext(t){
+  if(!parseRec(t.rec)) return null;
   const due=nextDue(t), id2=`${t.id.split('~')[0]}~${due}`;
   if(data.tasks.some(x=>x.id===id2)) return null;
   const spawned={ ...t, id:id2, due, done:false, doneAt:null, created:Date.now() };
@@ -1677,10 +1701,11 @@ async function nativeFetch(url, { method, body, headers }){
   const r = await Native.WebDav.request({ url, method, body, headers });
   return { status:r.status, ok:r.status>=200 && r.status<300, headers:{ get:k=>r.headers[k.toLowerCase()]||null }, text:async()=>r.body };
 }
-async function dav(cfg, method, segs, { body, headers }={}){
+const dav = (cfg, method, segs, opts)=>davFetch(cfg, method, davUrl(cfg, segs), opts);
+async function davFetch(cfg, method, url, { body, headers }={}){
   let resp;
   try{
-    resp = await (IS_NATIVE ? nativeFetch : fetch)(davUrl(cfg, segs), { method, body, cache:'no-store', credentials:'omit',
+    resp = await (IS_NATIVE ? nativeFetch : fetch)(url, { method, body, cache:'no-store', credentials:'omit',
       headers:{ 'Authorization':'Basic '+b64(cfg.user+':'+cfg.pass), ...(headers||{}) } });
   }catch(e){
     if(navigator.onLine===false) throw new SyncError('Offline – Sync folgt, sobald wieder Netz da ist.', { network:true, offline:true });
@@ -1783,50 +1808,353 @@ async function archiveOldTasks(cfg, segs){
   return archived.length;
 }
 
+/* ---------- Nextcloud Tasks (CalDAV) ----------
+   Gleicht die Aufgaben mit einer Aufgabenliste der Nextcloud ab (App „Tasks“ und jede andere CalDAV-App).
+   Jede Aufgabe ist dort ein VTODO; die UID ist die Aufgaben-ID. Zuordnung der Felder:
+     Name ↔ SUMMARY · Notiz ↔ DESCRIPTION · Fällig ↔ DUE · Priorität ↔ PRIORITY (Hoch 1–4, Mittel 0/5, Niedrig 6–9)
+     Tags ↔ CATEGORIES · Erledigt ↔ STATUS/COMPLETED · Schnellaufgabe und Wiederholung ↔ X-AUFGABEN-QUICK / X-AUFGABEN-REC
+   Beim Zurückschreiben werden nur geänderte Felder ersetzt; alles andere (Erinnerungen, Unteraufgaben,
+   Uhrzeiten …) bleibt, wie es in der Nextcloud steht.
+   Pro Aufgabe merkt sich die App Adresse, ETag und den zuletzt abgeglichenen Stand (LS_CALDAV). Daran erkennt sie,
+   welche Seite sich geändert hat; haben sich beide geändert, gewinnt die jüngere Änderung. */
+const LS_CALDAV = 'taskmanager_caldav';
+const CAL_NS = 'urn:ietf:params:xml:ns:caldav', DAV_NS = 'DAV:';
+const CAL_DEFAULT_NAME = 'Aufgaben';
+const CAL_SKIP_DONE_DAYS = 30;        // längst Erledigtes wird nicht mehr neu hochgeladen
+function getCalState(cal){
+  let s=null; try{ s=JSON.parse(localStorage.getItem(LS_CALDAV)); }catch(e){}
+  return s && s.cal===cal && s.items ? s : { cal, items:{} };
+}
+function setCalState(s){ try{ s ? localStorage.setItem(LS_CALDAV, JSON.stringify(s)) : localStorage.removeItem(LS_CALDAV); }catch(e){ console.error(e); } }
+
+function ncRoot(cfg){
+  let base=cfg.url.trim().replace(/\/+$/,'');
+  if(!/^https?:\/\//i.test(base)) base='https://'+base;
+  return base.replace(/\/remote\.php(\/.*)?$/,'');
+}
+function calHomePath(cfg){
+  const m=cfg.url.match(/\/remote\.php\/dav\/files\/([^/]+)/);
+  let user=cfg.davUser||cfg.user;
+  if(m){ try{ user=decodeURIComponent(m[1]); }catch(e){ user=m[1]; } }
+  return new URL(ncRoot(cfg)).pathname.replace(/\/+$/,'')+'/remote.php/dav/calendars/'+encodeURIComponent(user)+'/';
+}
+/* Server kodieren Adressen unterschiedlich (ö oder %C3%B6) → einheitliche Schreibweise zum Vergleichen */
+function normHref(h, cfg){
+  let p=String(h||'').trim();
+  try{ p=new URL(p, ncRoot(cfg)+'/').pathname; }catch(e){}
+  return p.split('/').map(s=>{ try{ return encodeURIComponent(decodeURIComponent(s)); }catch(e){ return s; } }).join('/');
+}
+const calUrl = (cfg, href)=>new URL(ncRoot(cfg)).origin+href;
+const calEtag = raw=>{ const e=syncEtag({ get:()=>raw }); return e ? e.slice(1,-1) : null; };
+const xmlEsc = s=>String(s).replace(/[&<>]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]));
+function xmlResponses(text, cfg){
+  const doc=new DOMParser().parseFromString(text, 'application/xml');
+  if(doc.getElementsByTagName('parsererror').length) throw new SyncError('Die Nextcloud hat eine unlesbare Antwort geschickt.');
+  return [...doc.getElementsByTagNameNS(DAV_NS,'response')].map(el=>({
+    el, href:normHref(el.getElementsByTagNameNS(DAV_NS,'href')[0]?.textContent, cfg),
+    prop:(ns,name)=>el.getElementsByTagNameNS(ns,name)[0]||null }));
+}
+async function calReq(cfg, method, href, opts){
+  const r=await davFetch(cfg, method, calUrl(cfg, href), opts);
+  if(r.status===403) throw new SyncError('Die Nextcloud verweigert den Zugriff auf die Aufgabenliste (Fehler 403).');
+  return r;
+}
+const CAL_XML = { 'Content-Type':'application/xml; charset=utf-8' };
+
+/* Aufgabenlisten des Benutzers (Kalender, die VTODO aufnehmen) */
+async function calLists(cfg){
+  const r=await calReq(cfg, 'PROPFIND', calHomePath(cfg), { headers:{ ...CAL_XML, Depth:'1' },
+    body:`<d:propfind xmlns:d="DAV:" xmlns:c="${CAL_NS}"><d:prop><d:displayname/><d:resourcetype/><c:supported-calendar-component-set/></d:prop></d:propfind>` });
+  if(r.status!==207) throw new SyncError(`Aufgabenlisten konnten nicht geladen werden (Fehler ${r.status}).`);
+  return xmlResponses(await r.text(), cfg).filter(x=>{
+    const rt=x.prop(DAV_NS,'resourcetype'); if(!rt || !rt.getElementsByTagNameNS(CAL_NS,'calendar').length) return false;
+    const comps=[...x.el.getElementsByTagNameNS(CAL_NS,'comp')].map(c=>(c.getAttribute('name')||'').toUpperCase());
+    return !comps.length || comps.includes('VTODO');
+  }).map(x=>({ href:x.href.replace(/\/?$/,'/'), name:(x.prop(DAV_NS,'displayname')?.textContent||'').trim()||decodeURIComponent(x.href.replace(/\/$/,'').split('/').pop()) }));
+}
+/* Liste „Aufgaben“ suchen, sonst anlegen */
+async function calEnsure(cfg){
+  const lists=await calLists(cfg);
+  const found=lists.find(l=>l.name===CAL_DEFAULT_NAME);
+  if(found) return found;
+  const home=normHref(calHomePath(cfg), cfg);
+  let href=home+'aufgaben/';
+  for(let i=2; lists.some(l=>l.href===href); i++) href=`${home}aufgaben-${i}/`;
+  const r=await calReq(cfg, 'MKCALENDAR', href, { headers:CAL_XML,
+    body:`<c:mkcalendar xmlns:d="DAV:" xmlns:c="${CAL_NS}"><d:set><d:prop><d:displayname>${CAL_DEFAULT_NAME}</d:displayname><c:supported-calendar-component-set><c:comp name="VTODO"/></c:supported-calendar-component-set></d:prop></d:set></c:mkcalendar>` });
+  if(r.status!==201) throw new SyncError(`Die Aufgabenliste „${CAL_DEFAULT_NAME}“ konnte nicht angelegt werden (Fehler ${r.status}).`);
+  return { href, name:CAL_DEFAULT_NAME };
+}
+/* Alle Aufgaben der Liste: Adresse → ETag */
+async function calListing(cfg, cal){
+  const r=await calReq(cfg, 'REPORT', cal, { headers:{ ...CAL_XML, Depth:'1' },
+    body:`<c:calendar-query xmlns:d="DAV:" xmlns:c="${CAL_NS}"><d:prop><d:getetag/></d:prop><c:filter><c:comp-filter name="VCALENDAR"><c:comp-filter name="VTODO"/></c:comp-filter></c:filter></c:calendar-query>` });
+  if(r.status===404) throw new SyncError('Die Aufgabenliste gibt es in der Nextcloud nicht mehr. Bitte in den Sync-Einstellungen eine Liste wählen.');
+  if(r.status!==207) throw new SyncError(`Aufgaben konnten nicht aus der Nextcloud geladen werden (Fehler ${r.status}).`);
+  const out=new Map();
+  xmlResponses(await r.text(), cfg).forEach(x=>{ const e=x.prop(DAV_NS,'getetag'); if(e && x.href!==cal) out.set(x.href, calEtag(e.textContent)||''); });
+  return out;
+}
+/* Inhalt einzelner Aufgaben: Adresse → { etag, ics } */
+async function calFetch(cfg, cal, hrefs){
+  const out=new Map();
+  for(let i=0; i<hrefs.length; i+=50){
+    const r=await calReq(cfg, 'REPORT', cal, { headers:{ ...CAL_XML, Depth:'1' },
+      body:`<c:calendar-multiget xmlns:d="DAV:" xmlns:c="${CAL_NS}"><d:prop><d:getetag/><c:calendar-data/></d:prop>${hrefs.slice(i,i+50).map(h=>`<d:href>${xmlEsc(h)}</d:href>`).join('')}</c:calendar-multiget>` });
+    if(r.status!==207) throw new SyncError(`Aufgaben konnten nicht aus der Nextcloud geladen werden (Fehler ${r.status}).`);
+    xmlResponses(await r.text(), cfg).forEach(x=>{
+      const d=x.prop(CAL_NS,'calendar-data'), e=x.prop(DAV_NS,'getetag');
+      if(d && d.textContent.trim()) out.set(x.href, { etag:calEtag(e?.textContent)||'', ics:d.textContent });
+    });
+  }
+  return out;
+}
+
+/* ----- iCalendar lesen und schreiben ----- */
+const icsEsc = s=>String(s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
+const icsUnesc = s=>String(s).replace(/\\([\s\S])/g,(_,c)=>c==='n'||c==='N'?'\n':c);
+const icsList = v=>(String(v).match(/(?:\\[\s\S]|[^,\\])+/g)||[]);
+const icsUtc = ts=>new Date(ts).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+const icsLines = text=>String(text).replace(/\r\n?/g,'\n').replace(/\n[ \t]/g,'').split('\n').filter(l=>l.trim()!=='');
+/* Zeilen nach 73 Bytes umbrechen (RFC 5545), ohne Zeichen zu zerteilen */
+function icsFold(line){
+  const enc=new TextEncoder(); let out='', len=0;
+  for(const ch of line){ const n=enc.encode(ch).length; if(len+n>73){ out+='\r\n '; len=1; } out+=ch; len+=n; }
+  return out;
+}
+function icsProp(line){
+  let i=0, q=false;
+  for(; i<line.length; i++){ const c=line[i]; if(c==='"') q=!q; else if(c===':' && !q) break; }
+  const head=line.slice(0,i), semi=head.indexOf(';');
+  return { name:(semi<0?head:head.slice(0,semi)).replace(/^.*\./,'').toUpperCase(), params:semi<0?'':head.slice(semi), value:line.slice(i+1) };
+}
+/* Datum oder Zeitpunkt → { date:'JJJJ-MM-TT' (Ortszeit), ts, time, utc } */
+function icsDate(p){
+  const m=p && String(p.value).trim().match(/^(\d{4})(\d\d)(\d\d)(?:T(\d\d)(\d\d)(\d\d)(Z?))?/);
+  if(!m) return null;
+  if(!m[4]) return { date:`${m[1]}-${m[2]}-${m[3]}`, ts:new Date(+m[1],m[2]-1,+m[3]).getTime() };
+  const d = m[7] ? new Date(Date.UTC(+m[1],m[2]-1,+m[3],+m[4],+m[5],+m[6])) : new Date(+m[1],m[2]-1,+m[3],+m[4],+m[5],+m[6]);
+  return { date:toDateStr(d.getTime()), ts:d.getTime(), time:`T${m[4]}${m[5]}${m[6]}`, utc:!!m[7] };
+}
+/* Erstes VTODO einer Datei: alle Zeilen plus die Eigenschaften der obersten Ebene (ohne VALARM usw.) */
+function icsTodo(text){
+  const lines=icsLines(text); let start=-1, end=-1, depth=0;
+  for(let i=0; i<lines.length; i++){
+    const u=lines[i].trim().toUpperCase();
+    if(start<0){ if(u==='BEGIN:VTODO') start=i; continue; }
+    if(u.startsWith('BEGIN:')) depth++;
+    else if(u.startsWith('END:')){ if(depth===0){ end=i; break; } depth--; }
+  }
+  if(start<0 || end<0) return null;
+  const props=[]; depth=0;
+  for(let i=start+1; i<end; i++){
+    const u=lines[i].trim().toUpperCase();
+    if(u.startsWith('BEGIN:')){ depth++; continue; }
+    if(u.startsWith('END:')){ depth--; continue; }
+    if(depth===0) props.push({ i, ...icsProp(lines[i]) });
+  }
+  return { lines, end, props };
+}
+function todoFields(v){
+  const get=n=>v.props.find(p=>p.name===n), val=n=>get(n)?.value??'';
+  const status=val('STATUS').trim().toUpperCase(), completed=icsDate(get('COMPLETED'));
+  const pr=parseInt(val('PRIORITY'),10)||0, due=icsDate(get('DUE'));
+  const tags=[];
+  v.props.filter(p=>p.name==='CATEGORIES').flatMap(p=>icsList(p.value)).forEach(s=>{ const t=icsUnesc(s).trim(); if(t && !tags.includes(t)) tags.push(t); });
+  const rawName=icsUnesc(val('SUMMARY')).replace(/\s*\n\s*/g,' ').trim();
+  return { uid:icsUnesc(val('UID')).trim(), rawName, dueProp:get('DUE'), dueInfo:due,
+    doneAt:completed?.ts||null, created:icsDate(get('CREATED'))?.ts||null,
+    lastMod:(icsDate(get('LAST-MODIFIED'))||icsDate(get('DTSTAMP')))?.ts||0,
+    proj:{ name:rawName||'(ohne Titel)', note:icsUnesc(val('DESCRIPTION')).trim(), due:due?.date||null,
+      prio: pr>=1&&pr<=4 ? 'Hoch' : pr>=6 ? 'Niedrig' : 'Mittel', tags,
+      done: status==='COMPLETED' || status==='CANCELLED' || (!!completed && !status),
+      quick: val('X-AUFGABEN-QUICK').trim()==='1', rec: parseRec(val('X-AUFGABEN-REC'))?.value||'' } };
+}
+/* Die Felder einer Aufgabe, die mit der Nextcloud abgeglichen werden */
+function calProj(t){
+  return { name:(t.name||'').replace(/\s*\n\s*/g,' ').trim()||'(ohne Titel)', note:(t.note||'').trim(), due:t.due||null, prio:PRIO_ORDER[t.prio]!==undefined?t.prio:'Mittel',
+    tags:[...new Set((t.tags||[]).map(s=>String(s).trim()).filter(Boolean))], done:!!t.done, quick:!!t.quick, rec:parseRec(t.rec)?.value||'' };
+}
+const projKey = p=>JSON.stringify([p.name,p.note,p.due,p.prio,[...p.tags].sort(),p.done,p.quick,p.rec]);
+function calHash(t){   // kurzer Fingerabdruck (cyrb53) statt des ganzen Textes
+  const s=projKey(calProj(t)); let h1=0xdeadbeef, h2=0x41c6ce57;
+  for(let i=0; i<s.length; i++){ const c=s.charCodeAt(i); h1=Math.imul(h1^c,2654435761); h2=Math.imul(h2^c,1597334677); }
+  h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);
+  h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);
+  return (4294967296*(2097151&h2)+(h1>>>0)).toString(36);
+}
+/* Fälligkeit schreiben: Hatte die Aufgabe in der Nextcloud eine Uhrzeit, bleibt sie erhalten */
+function dueLine(f, date){
+  const ymd=date.replace(/-/g,''), i=f.dueInfo;
+  if(!i || !i.time) return 'DUE;VALUE=DATE:'+ymd;
+  if(!i.utc) return `DUE${f.dueProp.params}:${ymd}${i.time}`;
+  const old=new Date(i.ts), d=new Date(date+'T00:00:00'); d.setHours(old.getHours(), old.getMinutes(), old.getSeconds());
+  return 'DUE:'+icsUtc(d.getTime());
+}
+/* Bestehendes VTODO mit dem Stand der Aufgabe überschreiben – nur Felder, die sich unterscheiden */
+function todoPatch(text, t, now=Date.now()){
+  const v=icsTodo(text), f=todoFields(v), cur=f.proj, want=calProj(t);
+  const drop=new Set(), add=[];
+  const set=(names, lines)=>{ names.forEach(n=>drop.add(n)); add.push(...lines); };
+  if(f.rawName!==want.name) set(['SUMMARY'], ['SUMMARY:'+icsEsc(want.name)]);
+  if(cur.note!==want.note) set(['DESCRIPTION'], want.note ? ['DESCRIPTION:'+icsEsc(want.note)] : []);
+  if(cur.due!==want.due) set(['DUE'], want.due ? [dueLine(f, want.due)] : []);
+  if(cur.prio!==want.prio) set(['PRIORITY'], want.prio==='Mittel' ? [] : ['PRIORITY:'+(want.prio==='Hoch'?1:9)]);
+  if([...cur.tags].sort().join('\n')!==[...want.tags].sort().join('\n')) set(['CATEGORIES'], want.tags.length ? ['CATEGORIES:'+want.tags.map(icsEsc).join(',')] : []);
+  if(cur.done!==want.done) set(['STATUS','COMPLETED','PERCENT-COMPLETE'],
+    want.done ? ['STATUS:COMPLETED','COMPLETED:'+icsUtc(t.doneAt||now),'PERCENT-COMPLETE:100'] : ['STATUS:NEEDS-ACTION']);
+  if(cur.quick!==want.quick) set(['X-AUFGABEN-QUICK'], want.quick ? ['X-AUFGABEN-QUICK:1'] : []);
+  if(cur.rec!==want.rec) set(['X-AUFGABEN-REC'], want.rec ? ['X-AUFGABEN-REC:'+want.rec] : []);
+  set(['LAST-MODIFIED','DTSTAMP'], ['LAST-MODIFIED:'+icsUtc(now),'DTSTAMP:'+icsUtc(now)]);
+  const rm=new Set(v.props.filter(p=>drop.has(p.name)).map(p=>p.i)), out=[];
+  v.lines.forEach((l,i)=>{ if(i===v.end) out.push(...add); if(!rm.has(i)) out.push(l); });
+  return out.map(icsFold).join('\r\n')+'\r\n';
+}
+function todoNew(t, now=Date.now()){
+  return todoPatch(['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//mohnstollen//Aufgaben//DE','BEGIN:VTODO',
+    'UID:'+icsEsc(t.id),'CREATED:'+icsUtc(t.created||now),'END:VTODO','END:VCALENDAR'].join('\r\n'), t, now);
+}
+/* Stand aus der Nextcloud in die Aufgabe übernehmen */
+function todoApply(t, f){
+  const p=f.proj, was=!!t.done;
+  Object.assign(t, { name:p.name, due:p.due, prio:p.prio, tags:[...p.tags], done:p.done });
+  if(p.done!==was || (p.done && !t.doneAt)) t.doneAt = p.done ? (f.doneAt||f.lastMod||Date.now()) : null;
+  if(p.note) t.note=p.note; else delete t.note;
+  if(p.quick) t.quick=true; else delete t.quick;
+  if(p.rec) t.rec=p.rec; else delete t.rec;
+  p.tags.forEach(tg=>{ if(!data.tags.includes(tg)) data.tags.push(tg); });
+  if(!was && t.done) spawnNext(t);        // in der Nextcloud abgehakt → nächste Wiederholung anlegen
+}
+async function pool(items, n, fn){
+  let i=0; const run=async()=>{ while(i<items.length) await fn(items[i++]); };
+  await Promise.all(Array.from({ length:Math.min(n, items.length) }, run));
+}
+
+async function tasksSync(cfg){
+  let cal=cfg.tasksCal;
+  if(!cal){ const l=await calEnsure(cfg); cal=l.href; updateSyncCfg({ tasksCal:l.href, tasksCalName:l.name }); }
+  cal=normHref(cal, cfg).replace(/\/?$/,'/');
+  const st=getCalState(cal), now=Date.now();
+  const listing=await calListing(cfg, cal);
+  // Liste plötzlich leer, obwohl viel abgeglichen war (z. B. gelöscht und neu angelegt): nichts lokal löschen, neu hochladen
+  if(!listing.size && Object.keys(st.items).length>=5) st.items={};
+  const local=new Map(data.tasks.map(t=>[t.id, t]));
+  const byHref=new Map(Object.entries(st.items).map(([id,it])=>[it.h, id]));
+  const need=new Set();
+  listing.forEach((etag, href)=>{ const id=byHref.get(href); if(!id || !etag || st.items[id].e!==etag) need.add(href); });
+  Object.entries(st.items).forEach(([id,it])=>{ const t=local.get(id); if(t && calHash(t)!==it.s && listing.has(it.h)) need.add(it.h); });
+  const fetched=await calFetch(cfg, cal, [...need]);
+  let changed=false; const stats={ in:0, out:0 };
+  const put=async(href, ics, cond)=>{
+    const r=await calReq(cfg, 'PUT', href, { body:ics, headers:{ 'Content-Type':'text/calendar; charset=utf-8', ...cond } });
+    if(r.status===412) return null;                                    // inzwischen geändert → beim nächsten Abgleich
+    if(!r.ok) throw new SyncError(`Aufgabe konnte nicht in die Nextcloud geschrieben werden (Fehler ${r.status}).`);
+    stats.out++;
+    return { e:calEtag(r.headers.get('OC-ETag')||r.headers.get('ETag'))||'' };
+  };
+  const del=async(href, etag)=>{
+    const r=await calReq(cfg, 'DELETE', href, etag ? { headers:{ 'If-Match':`"${etag}"` } } : {});
+    if(!(r.ok || r.status===404 || r.status===412)) throw new SyncError(`Aufgabe konnte in der Nextcloud nicht gelöscht werden (Fehler ${r.status}).`);
+  };
+
+  // 1. In der Nextcloud neu oder geändert (oder auf beiden Seiten geändert)
+  for(const [href, f0] of fetched){
+    const v=icsTodo(f0.ics); if(!v) continue;
+    const f=todoFields(v); if(!f.uid) continue;
+    let id=byHref.get(href);
+    if(!id && local.has(f.uid) && !st.items[f.uid]) id=f.uid;         // von einem anderen Gerät hochgeladen
+    if(!id){
+      if(st.items[f.uid] || local.has(f.uid)) continue;                 // doppelte UID in der Liste → nicht anfassen
+      if(data.tombstones[f.uid]>=f.lastMod){ await del(href, f0.etag); continue; }   // hier gelöscht, dort noch vorhanden
+      const t={ id:f.uid, name:'', due:null, prio:'Mittel', tags:[], done:false, doneAt:null, created:f.created||now };
+      todoApply(t, f); data.tasks.push(t); local.set(t.id, t);
+      st.items[t.id]={ h:href, e:f0.etag, s:calHash(t) }; byHref.set(href, t.id); changed=true; stats.in++;
+      continue;
+    }
+    const t=local.get(id), it=st.items[id];
+    if(!t) continue;                                                    // lokal gelöscht → Schritt 3
+    const same=projKey(calProj(t))===projKey(f.proj);
+    const localChanged=!it || calHash(t)!==it.s, remoteChanged=!it || it.e!==f0.etag;
+    if(same){ st.items[id]={ h:href, e:f0.etag, s:calHash(t) }; }
+    else if(remoteChanged && (!localChanged || f.lastMod>(t.updatedAt||0))){
+      todoApply(t, f); st.items[id]={ h:href, e:f0.etag, s:calHash(t) }; changed=true; stats.in++;
+    }else{
+      const r=await put(href, todoPatch(f0.ics, t, now), f0.etag ? { 'If-Match':`"${f0.etag}"` } : {});
+      if(r) st.items[id]={ h:href, e:r.e, s:calHash(t) };
+    }
+    byHref.set(href, id);
+  }
+  // 2. In der Nextcloud gelöscht → auch hier löschen, außer die Aufgabe wurde inzwischen geändert
+  for(const [id, it] of Object.entries(st.items)){
+    if(listing.has(it.h)) continue;
+    const t=local.get(id);
+    if(t && calHash(t)===it.s){ data.tasks=data.tasks.filter(x=>x!==t); local.delete(id); changed=true; stats.in++; }
+    delete st.items[id];
+  }
+  // 3. Hier gelöscht → in der Nextcloud löschen
+  await pool(Object.entries(st.items).filter(([id])=>!local.has(id)), 4, async([id, it])=>{ await del(it.h, it.e); delete st.items[id]; stats.out++; });
+  // 4. Hier neu → hochladen
+  const oldLimit=now-CAL_SKIP_DONE_DAYS*86400000;
+  await pool(data.tasks.filter(t=>!st.items[t.id] && !(t.done && (t.doneAt||0)<oldLimit)), 4, async t=>{
+    const href=cal+encodeURIComponent(t.id)+'.ics';
+    if(listing.has(href) && !fetched.has(href)) return;
+    const r=await put(href, todoNew(t, now), { 'If-None-Match':'*' });
+    if(r) st.items[t.id]={ h:href, e:r.e, s:calHash(t) };
+  });
+  setCalState(st);
+  if(changed){ save(); renderFilters(); render(); }
+  return stats;
+}
+
+/* Abgleich über die Sync-Datei (zwischen Geräten mit dieser App) */
+async function fileSync(cfg){
+  const segs=davSegments(cfg.path);
+  let done=false;
+  let conflicts=0;
+  for(let attempt=0; attempt<3 && !done; attempt++){
+    // In der App unkomprimiert laden, damit kein Proxy den ETag verändert
+    const r=await dav(cfg, 'GET', segs, IS_NATIVE ? { headers:{ 'Accept-Encoding':'identity' } } : {});
+    let remote=null, etag=null;
+    if(r.status===200){
+      etag=syncEtag(r.headers);
+      const text=await r.text();
+      if(text.trim()) remote=parseRemote(text);
+    }else if(r.status!==404){
+      throw new SyncError(`Laden aus der Nextcloud fehlgeschlagen (Fehler ${r.status}).`);
+    }
+    applyMerged(mergeData(data, remote||{ tasks:[], projects:[], tags:[] }));
+    if(remote && canon(remote)===canon(data)){ done=true; break; }   // Server ist bereits aktuell
+    const put=await davPut(cfg, segs, JSON.stringify(syncPayload()), 'application/json', etag);
+    if(put.status===412){
+      // zwischenzeitlich geändert → neu laden & zusammenführen. Scheitert es zweimal in Folge,
+      // passt der ETag des Servers nicht zu If-Match → für diese Sitzung ohne If-Match weiter.
+      if(++conflicts>=2 && !syncState.noIfMatch){ syncState.noIfMatch=true; console.warn('If-Match wird vom Server nicht akzeptiert – Sync ohne Konfliktschutz.'); }
+      continue;
+    }
+    if(put.status===423) throw new SyncError(LOCKED_MSG(segs[segs.length-1]), { locked:true });
+    if(!put.ok) throw new SyncError(`Speichern in der Nextcloud fehlgeschlagen (Fehler ${put.status}).`);
+    done=true;
+  }
+  if(!done) throw new SyncError('Die Datei wird gerade ständig geändert – bitte gleich noch einmal versuchen.');
+  if(cfg.todoTxt){
+    const txt=buildTodoTxt();
+    if(txt!==cfg.lastTodoTxt){
+      const r=await davPut(cfg, [...segs.slice(0,-1), 'todo.txt'], txt, 'text/plain; charset=utf-8', null);
+      if(r.status===423) console.warn('todo.txt ist gesperrt – wird beim nächsten Sync geschrieben.');
+      else if(!r.ok) throw new SyncError(`todo.txt konnte nicht gespeichert werden (Fehler ${r.status}).`);
+      else updateSyncCfg({ lastTodoTxt:txt });
+    }
+  }
+  try{ return await archiveOldTasks(cfg, segs); }
+  catch(e){ console.warn('Archivieren fehlgeschlagen – nächster Versuch beim nächsten Sync:', e); return 0; }
+}
 async function syncNow({ manual=false }={}){
   const cfg=getSyncCfg(); if(!syncConfigured(cfg)) return;
   if(syncState.running){ syncState.again=true; return; }
   syncState.running=true; clearTimeout(syncState.timer); setSyncStatus('busy');
   try{
-    const segs=davSegments(cfg.path);
-    let done=false;
-    let conflicts=0;
-    for(let attempt=0; attempt<3 && !done; attempt++){
-      // In der App unkomprimiert laden, damit kein Proxy den ETag verändert
-      const r=await dav(cfg, 'GET', segs, IS_NATIVE ? { headers:{ 'Accept-Encoding':'identity' } } : {});
-      let remote=null, etag=null;
-      if(r.status===200){
-        etag=syncEtag(r.headers);
-        const text=await r.text();
-        if(text.trim()) remote=parseRemote(text);
-      }else if(r.status!==404){
-        throw new SyncError(`Laden aus der Nextcloud fehlgeschlagen (Fehler ${r.status}).`);
-      }
-      applyMerged(mergeData(data, remote||{ tasks:[], projects:[], tags:[] }));
-      if(remote && canon(remote)===canon(data)){ done=true; break; }   // Server ist bereits aktuell
-      const put=await davPut(cfg, segs, JSON.stringify(syncPayload()), 'application/json', etag);
-      if(put.status===412){
-        // zwischenzeitlich geändert → neu laden & zusammenführen. Scheitert es zweimal in Folge,
-        // passt der ETag des Servers nicht zu If-Match → für diese Sitzung ohne If-Match weiter.
-        if(++conflicts>=2 && !syncState.noIfMatch){ syncState.noIfMatch=true; console.warn('If-Match wird vom Server nicht akzeptiert – Sync ohne Konfliktschutz.'); }
-        continue;
-      }
-      if(put.status===423) throw new SyncError(LOCKED_MSG(segs[segs.length-1]), { locked:true });
-      if(!put.ok) throw new SyncError(`Speichern in der Nextcloud fehlgeschlagen (Fehler ${put.status}).`);
-      done=true;
-    }
-    if(!done) throw new SyncError('Die Datei wird gerade ständig geändert – bitte gleich noch einmal versuchen.');
-    if(cfg.todoTxt){
-      const txt=buildTodoTxt();
-      if(txt!==cfg.lastTodoTxt){
-        const r=await davPut(cfg, [...segs.slice(0,-1), 'todo.txt'], txt, 'text/plain; charset=utf-8', null);
-        if(r.status===423) console.warn('todo.txt ist gesperrt – wird beim nächsten Sync geschrieben.');
-        else if(!r.ok) throw new SyncError(`todo.txt konnte nicht gespeichert werden (Fehler ${r.status}).`);
-        else updateSyncCfg({ lastTodoTxt:txt });
-      }
-    }
-    let archived=0;
-    try{ archived=await archiveOldTasks(cfg, segs); }catch(e){ console.warn('Archivieren fehlgeschlagen – nächster Versuch beim nächsten Sync:', e); }
+    const archived = cfg.file!==false ? await fileSync(cfg) : 0;
+    if(cfg.tasks) await tasksSync(cfg);
     updateSyncCfg({ lastSync:Date.now(), lastError:null });
     setSyncStatus('ok');
     if(archived) toast(`${archived} erledigte Aufgabe(n), älter als 12 Monate, ins Archiv verschoben`);
@@ -1866,6 +2194,9 @@ function openSync(){
   $('syncUrl').value=cfg.url||''; $('syncUser').value=cfg.user||''; $('syncPass').value=cfg.pass||'';
   $('syncPath').value=cfg.path||SYNC_DEFAULT_PATH;
   $('syncAuto').checked=cfg.auto!==false; $('syncTodoTxt').checked=!!cfg.todoTxt;
+  $('syncFile').checked=cfg.file!==false; $('syncTasks').checked=!!cfg.tasks;
+  fillTaskLists(cfg.tasksCal ? [{ href:cfg.tasksCal, name:cfg.tasksCalName||'Gewählte Liste' }] : [], cfg.tasksCal||'');
+  syncFormToggle();
   delete $('syncUser').dataset.davFor; delete $('syncUser').dataset.davUser;
   $('syncOrigin').textContent=location.origin;
   $('syncDisconnect').style.display=syncConfigured(cfg)?'':'none';
@@ -1873,6 +2204,26 @@ function openSync(){
   $('syncOverlay').classList.add('show');
 }
 function closeSync(){ $('syncOverlay').classList.remove('show'); }
+function syncFormToggle(){
+  $('syncFileBox').style.display=$('syncFile').checked?'':'none';
+  $('syncTasksBox').style.display=$('syncTasks').checked?'':'none';
+}
+/* Auswahl der Aufgabenliste; ohne Auswahl nimmt die App die Liste „Aufgaben“ und legt sie bei Bedarf an */
+function fillTaskLists(lists, selected){
+  const sel=$('syncTasksCal');
+  sel.innerHTML=`<option value="">Liste „${CAL_DEFAULT_NAME}“ (wird bei Bedarf angelegt)</option>`
+    + lists.map(l=>`<option value="${escapeAttr(l.href)}">${escapeHtml(l.name)}</option>`).join('');
+  sel.value=selected; if(sel.selectedIndex<0) sel.value='';
+}
+async function loadTaskLists(){
+  const cfg=readSyncForm(); if(!cfg) return;
+  renderSyncInfo('⟳ Lade Aufgabenlisten …');
+  try{
+    const lists=await calLists(cfg);
+    fillTaskLists(lists, $('syncTasksCal').value);
+    renderSyncInfo(`<span style="color:#8ee6b4">✔ ${lists.length} Aufgabenliste(n) gefunden.</span>`);
+  }catch(e){ renderSyncInfo(errHtml(e.message)); }
+}
 function renderSyncInfo(msg){
   const cfg=getSyncCfg(); const el=$('syncInfo');
   if(msg){ el.innerHTML=msg; return; }
@@ -1886,7 +2237,11 @@ function readSyncForm(){
   const cfg=Object.assign({}, prev, {
     url:$('syncUrl').value.trim(), user:$('syncUser').value.trim(), pass:$('syncPass').value,
     path:davSegments($('syncPath').value.trim()||SYNC_DEFAULT_PATH).join('/'),
-    auto:$('syncAuto').checked, todoTxt:$('syncTodoTxt').checked });
+    auto:$('syncAuto').checked, todoTxt:$('syncTodoTxt').checked,
+    file:$('syncFile').checked, tasks:$('syncTasks').checked });
+  const calSel=$('syncTasksCal');
+  cfg.tasksCal=calSel.value||null; cfg.tasksCalName=calSel.value ? calSel.selectedOptions[0].textContent : null;
+  if(!cfg.file && !cfg.tasks){ renderSyncInfo('<span style="color:#ff9aa4">Bitte mindestens eine Art des Abgleichs einschalten: Sync-Datei oder Nextcloud Tasks.</span>'); return null; }
   if(cfg.path!==prev.path || cfg.url!==prev.url || cfg.user!==prev.user) delete cfg.lastTodoTxt;
   const ds=$('syncUser').dataset;
   if(ds.davFor===cfg.user && ds.davUser) cfg.davUser=ds.davUser;
@@ -1901,6 +2256,12 @@ async function testSync(){
   const cfg=readSyncForm(); if(!cfg) return;
   renderSyncInfo('⟳ Teste Verbindung …');
   try{
+    if(cfg.file===false){
+      const lists=await calLists(cfg);
+      fillTaskLists(lists, $('syncTasksCal').value);
+      renderSyncInfo(`<span style="color:#8ee6b4">✔ Verbindung ok – ${lists.length} Aufgabenliste(n) in Nextcloud Tasks.</span>`);
+      return;
+    }
     const r=await dav(cfg, 'GET', davSegments(cfg.path));
     if(r.status===200){
       const text=await r.text(); const remote=text.trim()?parseRemote(text):{ tasks:[] };
@@ -1918,8 +2279,8 @@ function saveSync(){
   closeSync(); setSyncStatus('ok'); syncNow({ manual:true });
 }
 function disconnectSync(){
-  if(!confirm('Nextcloud-Sync auf diesem Gerät trennen? Die Aufgaben bleiben lokal erhalten, die Datei in der Nextcloud bleibt unberührt.')) return;
-  clearTimeout(syncState.timer); setSyncCfg(null); setSyncStatus(); closeSync();
+  if(!confirm('Nextcloud-Sync auf diesem Gerät trennen? Die Aufgaben bleiben lokal erhalten, Datei und Aufgabenliste in der Nextcloud bleiben unberührt.')) return;
+  clearTimeout(syncState.timer); setSyncCfg(null); setCalState(null); setSyncStatus(); closeSync();
   toast('Sync getrennt.');
 }
 
@@ -2189,6 +2550,8 @@ $('qrCancel').onclick = ()=>$('qrOverlay').classList.remove('show');
 // Text eines Anmelde-QR-Codes (nc://login/…) ins Adressfeld eingefügt → direkt übernehmen
 $('syncUrl').addEventListener('input', e=>{ const c=parseNcLogin(e.target.value); if(c) applyNcCredentials(c); });
 $('syncTest').onclick = testSync;
+$('syncFile').onchange = $('syncTasks').onchange = syncFormToggle;
+$('syncTasksLoad').onclick = loadTaskLists;
 $('syncDisconnect').onclick = disconnectSync;
 $('syncStatus').onclick = ()=>syncNow({ manual:true });
 document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') scheduleSync(300); });

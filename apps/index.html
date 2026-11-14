@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Apps</title>
+<meta name="description" content="Unsere Apps auf einen Blick – mit Screenshots, Beschreibung und Download.">
+<meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e0f12" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="icons/aufgaben.png">
+<style>
+:root{
+  --bg:#f5f5f7; --card:#fff; --fg:#15171c; --muted:#6a6f7a; --line:#e3e4e9; --chip:#e9eaef;
+  --accent:#0a66d8; --accent-fg:#fff; --pill:#e9eaef; --pill-fg:#0a66d8; --shadow:0 1px 2px rgba(20,23,28,.05),0 8px 24px rgba(20,23,28,.06);
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0e0f12; --card:#191b20; --fg:#f1f2f5; --muted:#9a9fab; --line:#2a2d34; --chip:#23262d;
+  --accent:#4c9bff; --accent-fg:#06121f; --pill:#262a32; --pill-fg:#6fb0ff; --shadow:0 1px 2px rgba(0,0,0,.3);
+}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.wrap{max-width:980px;margin:0 auto;padding:0 16px}
+[hidden]{display:none!important}
+
+/* Kopfzeile */
+.top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:12px;height:56px}
+.brand{font-weight:750;font-size:1.25rem;letter-spacing:-.02em;color:var(--fg);display:flex;align-items:center;gap:8px;white-space:nowrap}
+.brand:hover{text-decoration:none}
+.brand svg{width:24px;height:24px;color:var(--accent)}
+.search{margin-left:auto;position:relative;flex:0 1 280px;min-width:0}
+.search input{width:100%;height:36px;border:0;border-radius:10px;background:var(--chip);color:var(--fg);font:inherit;font-size:.95rem;padding:0 12px 0 34px}
+.search input::placeholder{color:var(--muted)}
+.search svg{position:absolute;left:10px;top:9px;width:18px;height:18px;color:var(--muted);pointer-events:none}
+
+/* Startseite */
+h1{font-size:2.1rem;line-height:1.15;letter-spacing:-.03em;margin:28px 0 4px}
+.lead{color:var(--muted);margin:0 0 20px;max-width:60ch}
+.hero{position:relative;display:flex;align-items:flex-end;overflow:hidden;border-radius:22px;padding:28px 290px 28px 28px;min-height:340px;color:#fff;background:linear-gradient(140deg,var(--a1),var(--a2));box-shadow:var(--shadow);cursor:pointer}
+.hero .tag{font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.85}
+.hero h2{font-size:1.9rem;line-height:1.1;letter-spacing:-.025em;margin:6px 0 8px}
+.hero p{margin:0 0 18px;max-width:38ch;opacity:.92}
+.hero .row{display:flex;align-items:center;gap:12px}
+.hero .row img{width:52px;height:52px;border-radius:23%;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+.hero .row b{display:block;line-height:1.2}
+.hero .row small{opacity:.85}
+.hero .row .get{margin-left:8px;background:rgba(255,255,255,.22);color:#fff}
+.hero .phone{position:absolute;right:44px;top:36px;width:210px;height:auto;transform:rotate(4deg);border-radius:24px;border:5px solid rgba(255,255,255,.35);box-shadow:0 18px 40px rgba(0,0,0,.35)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:22px 16px 4px;margin:0 -16px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:0;border-radius:999px;background:var(--chip);padding:7px 14px;font-size:.92rem;font-weight:600;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--fg);color:var(--bg)}
+h3.sec{font-size:1.3rem;letter-spacing:-.02em;margin:22px 0 6px}
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));column-gap:28px}
+.item{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--line);color:inherit;min-width:0}
+.item:hover{text-decoration:none}
+.item img{width:64px;height:64px;border-radius:23%;flex:none;box-shadow:0 1px 4px rgba(0,0,0,.14)}
+.item .txt{flex:1;min-width:0}
+.item b{display:block;font-size:1.05rem;line-height:1.25}
+.item span{display:block;color:var(--muted);font-size:.88rem;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.item .plat{font-size:.74rem;margin-top:3px;-webkit-line-clamp:1}
+.get{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:74px;height:32px;padding:0 16px;border:0;border-radius:999px;background:var(--pill);color:var(--pill-fg);font-weight:750;font-size:.86rem;letter-spacing:.02em;cursor:pointer;white-space:nowrap}
+a.get:hover{text-decoration:none;filter:brightness(.96)}
+.get.primary{background:var(--accent);color:var(--accent-fg);height:38px;padding:0 22px;font-size:.95rem}
+.get svg{width:16px;height:16px}
+.empty{color:var(--muted);padding:28px 0}
+
+/* Detailseite */
+.back{display:inline-flex;align-items:center;gap:4px;margin:16px 0 6px;font-weight:600}
+.back svg{width:18px;height:18px}
+.head{display:flex;gap:20px;align-items:flex-start;padding:10px 0 20px}
+.head img{width:120px;height:120px;border-radius:23%;flex:none;box-shadow:0 2px 12px rgba(0,0,0,.18)}
+.head h1{margin:0;font-size:1.75rem}
+.head .sub{color:var(--muted);margin:4px 0 14px}
+.acts{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.facts{display:flex;overflow-x:auto;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 0;scrollbar-width:none}
+.facts::-webkit-scrollbar{display:none}
+.fact{flex:1 0 auto;min-width:104px;text-align:center;padding:0 14px;border-left:1px solid var(--line)}
+.fact:first-child{border-left:0}
+.fact small{display:block;color:var(--muted);font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.fact b{display:block;font-size:1.05rem;margin-top:2px;white-space:nowrap}
+.fact i{display:block;font-style:normal;color:var(--muted);font-size:.78rem;white-space:nowrap}
+.shots{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px 16px 14px;margin:0 -16px;scroll-padding:0 16px}
+.shots img{flex:none;width:230px;height:auto;aspect-ratio:360/740;border-radius:20px;border:1px solid var(--line);background:var(--card);scroll-snap-align:start;box-shadow:var(--shadow);cursor:zoom-in}
+.note{color:var(--muted);font-size:.8rem;margin:-4px 0 0}
+.cols{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:8px 40px}
+.desc p{margin:0 0 12px;max-width:66ch}
+.desc ul{margin:0;padding-left:1.15em;max-width:66ch}
+.desc li{margin:5px 0}
+.box{background:var(--card);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow);margin-bottom:14px}
+.box h4{margin:0 0 6px;font-size:1rem}
+.box p,.box ol{margin:0;color:var(--muted);font-size:.92rem}
+.box ol{padding-left:1.2em}
+.box li{margin:4px 0}
+dl.info{margin:0}
+dl.info div{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid var(--line);font-size:.94rem}
+dl.info div:last-child{border-bottom:0}
+dl.info dt{color:var(--muted);flex:none}
+dl.info dd{margin:0;text-align:right;min-width:0;overflow-wrap:anywhere}
+footer{color:var(--muted);font-size:.85rem;padding:36px 0 calc(28px + env(safe-area-inset-bottom));margin-top:28px;border-top:1px solid var(--line)}
+
+/* Screenshot groß */
+.zoom{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.86);display:flex;align-items:center;justify-content:center;padding:20px;cursor:zoom-out}
+.zoom img{max-width:100%;max-height:100%;border-radius:18px}
+
+@media (max-width:720px){
+  h1{font-size:1.75rem;margin-top:20px}
+  .hero{padding:22px;min-height:0}
+  .hero .phone{display:none}
+  .hero h2{font-size:1.55rem}
+  .cols{grid-template-columns:1fr}
+  .head{gap:14px}
+  .head img{width:96px;height:96px}
+  .head h1{font-size:1.4rem}
+  .shots img{width:200px}
+  .brand span{display:none}
+}
+@media (prefers-reduced-motion:no-preference){.item img,.hero .phone{transition:transform .2s}.item:hover img{transform:scale(1.04)}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#" aria-label="Apps – Startseite">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2.4"/><rect x="13" y="3" width="8" height="8" rx="2.4" opacity=".55"/><rect x="3" y="13" width="8" height="8" rx="2.4" opacity=".55"/><rect x="13" y="13" width="8" height="8" rx="2.4"/></svg>
+      Apps
+    </a>
+    <label class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Apps durchsuchen" aria-label="Apps durchsuchen" autocomplete="off">
+    </label>
+  </div>
+</header>
+
+<main class="wrap" id="view"></main>
+
+<footer class="wrap">
+  Alle Apps sind kostenlos, ohne Werbung und ohne Konto nutzbar. Quelltext auf
+  <a href="https://github.com/mohnstollen" rel="noopener">GitHub</a>.
+</footer>
+
+<script>
+'use strict';
+/* ------------------------------------------------------------------
+   App-Katalog. Neue App = neuer Eintrag hier + Icon unter icons/<id>.png
+   + Screenshots unter screenshots/<id>-1.webp, -2.webp … (Anzahl in "shots").
+   web: Adresse der Web-App · apk: Dateiname im neuesten GitHub-Release von "repo".
+   ------------------------------------------------------------------ */
+const PAGES = 'https://mohnstollen.github.io/';
+const GH = 'https://github.com/mohnstollen/';
+const APPS = [
+  { id: 'wetter', name: 'Wetter', sub: 'DWD-Wetter mit Regenradar und Warnungen', cat: 'Wetter',
+    repo: 'regenradar', web: PAGES + 'regenradar/wetter/', apk: 'wetter.apk', shots: 2, colors: ['#0b5cab', '#3d94e6'],
+    text: ['Das Wetter direkt von der Quelle: Messwerte der nächsten DWD-Station, amtliche Warnungen und eine Regenvorhersage auf fünf Minuten genau – ohne Werbung und ohne Konto.',
+      'Die Vorhersage vergleicht auf Wunsch mehrere Modelle des DWD und des ECMWF und fasst den Tag zusätzlich in einem Satz zusammen.'],
+    features: ['Regen in den nächsten 2 Stunden aus dem DWD-Radar', 'Verlauf von 12 Stunden bis 10 Tage, Modelle ICON-D2, ICON-EU, MOSMIX, ECMWF',
+      'Radar-Animation, Satellitenbild und Windkarte', 'Amtliche Warnungen, Pollenflug und Luftqualität',
+      'Android: Widgets für den Homescreen und Benachrichtigungen bei Regen und Warnungen'],
+    info: { 'Datenquellen': 'DWD (über Bright Sky), Open-Meteo, EUMETSAT' } },
+  { id: 'aufgaben', name: 'Aufgaben', sub: 'Aufgabenliste mit Schnelleingabe, offline und privat', cat: 'Alltag',
+    repo: 'aufgaben', web: PAGES + 'aufgaben/', apk: 'aufgaben.apk', shots: 2, colors: ['#2f6df0', '#6aa0ff'],
+    text: ['Eine Aufgabenverwaltung, die auf dem Gerät bleibt: kein Konto, kein Tracking. Aufgaben sind nach Fälligkeit gruppiert – Überfällig, Heute, Morgen, Nächste 7 Tage.',
+      'Mit der Schnelleingabe reicht eine Zeile: „Steuer machen #büro freitag (A)“ legt Name, Tag, Datum und Priorität in einem Rutsch an.'],
+    features: ['Schnellaufgaben, Tags, Prioritäten und wiederkehrende Aufgaben', 'Wischen zum Abhaken oder Löschen, jeweils mit „Rückgängig“',
+      'Optionaler Abgleich über die eigene Nextcloud', 'Export und Import als JSON oder todo.txt',
+      'Android: Widget, Kachel in den Schnelleinstellungen und „Teilen → Neue Aufgabe“'],
+    info: { 'Lizenz': 'GPL-2.0' } },
+  { id: 'spielekiste', name: 'Spielekiste', sub: 'Neun Spiele, Schach mit Coach und ein Quiz', cat: 'Spiele',
+    repo: 'spielekiste', web: PAGES + 'spielekiste/', shots: 3, colors: ['#2f6fb0', '#5d9bd6'],
+    text: ['Eine Spielesammlung für zwischendurch, die komplett offline läuft: Sudoku in fünf Stufen, Minesweeper, 2048, Solitär, FreeCell, Vier gewinnt, Reversi, Snake und Memory.',
+      'Dazu Schach gegen den Computer – auf Wunsch mit Coach, der vor groben Fehlern warnt –, Schachaufgaben und eine Schachschule mit 34 Lektionen.'],
+    features: ['Spielstände werden gespeichert, angefangene Partien gehen weiter', 'Profile für mehrere Spieler, Statistik und Bestenlisten',
+      'Rätsel des Tages', 'Schachschule: vom Brett bis zu Gabel, Fesselung und Grundmatts', 'Sudokus zum Ausdrucken'] },
+  { id: 'radpausen', name: 'Radpausen', sub: 'Bäcker, Wasser und Schutzhütten entlang deiner Route', cat: 'Unterwegs',
+    repo: 'radpausen', web: PAGES + 'radpausen/', shots: 1, colors: ['#1f6f4a', '#3fa372'],
+    text: ['GPX-Strecke laden und sehen, was am Weg liegt: Bäcker, Supermärkte, Trinkwasser, Friedhöfe (meist mit Wasserhahn), Schutzhütten, Picknickplätze, Fahrradläden und Reparaturstationen.',
+      'Zu jedem Ort gibt es Kilometer, Abstand zur Strecke, die voraussichtliche Ankunftszeit – und ob dann geöffnet ist.'],
+    features: ['Warnt vor langen Abschnitten ohne Essen oder Wasser', 'Funktioniert unterwegs ohne Netz, sobald die Strecke einmal geladen ist',
+      '„Unterwegs“-Modus mit Standort auf der Strecke', 'Export als GPX-Wegpunkte für den Radcomputer',
+      'Strecke per Bluetooth an den iGPSPORT BSC300 senden'],
+    info: { 'Datenquellen': 'OpenStreetMap' } },
+  { id: 'spritpreise', name: 'Spritpreise', sub: 'Tankstellen in der Nähe mit Umwegrechner', cat: 'Unterwegs',
+    repo: 'spritpreise', web: PAGES + 'spritpreise/', apk: 'spritpreise.apk', shots: 1, colors: ['#14181c', '#3a424c'],
+    text: ['Aktuelle Preise für E5, E10 und Diesel rund um den Standort oder entlang einer Route – als Karte oder Liste.',
+      'Der Umwegrechner zeigt, ob sich die günstigere Tankstelle ein paar Kilometer weiter wirklich lohnt.'],
+    features: ['Sortieren nach Entfernung, Preis oder Ersparnis', 'Favoriten und Preisverlauf', 'Tanken entlang einer Route', 'Logbuch für Tankvorgänge'],
+    info: { 'Datenquellen': 'Tankerkönig (CC BY 4.0), OpenStreetMap', 'Hinweis': 'Benötigt einen kostenlosen Tankerkönig-API-Schlüssel' } },
+  { id: 'einkaufszettel', name: 'Einkaufszettel', sub: 'Einkaufslisten und Rezepte, auch gemeinsam', cat: 'Alltag',
+    repo: 'einkaufszettel', web: PAGES + 'einkaufszettel/', shots: 1, colors: ['#0f766e', '#2aa79c'],
+    text: ['Mehrere Listen für Lebensmittel, Drogerie oder Baumarkt – nach Abteilungen sortiert, damit im Laden nichts vergessen wird.',
+      'Rezepte lassen sich sammeln, per Foto einscannen und die fehlenden Zutaten mit einem Fingertipp auf die Liste setzen.'],
+    features: ['Listen per Einladungslink teilen, Änderungen erscheinen live', 'Archiv vergangener Einkäufe und Statistik',
+      'Rezepte mit Kategorien, Merkmalen und Zutatensuche', 'Private Listen bleiben auf dem Gerät, Backup als JSON'],
+    info: { 'Lizenz': 'GPL-3.0' } },
+  { id: 'regenradar', name: 'Regenradar', sub: 'Warnt, bevor der Regen ankommt', cat: 'Wetter',
+    repo: 'regenradar', web: PAGES + 'regenradar/regenradar/', shots: 1, colors: ['#0b5cab', '#2f7fd0'],
+    text: ['Das DWD-Regenradar als schlanke App: Karte mit Animation, Vorhersage für die nächsten zwei Stunden und eine Warnung, sobald Regen in den gewählten Umkreis zieht.'],
+    features: ['Radar in 1 km Auflösung, alle 5 Minuten neu', 'Umkreis-Warnung für den eigenen Standort', 'Aktuelles Wetter und amtliche Warnungen',
+      'Außerhalb Deutschlands mit RainViewer und Open-Meteo'],
+    info: { 'Datenquellen': 'DWD (über Bright Sky), basemap.de, OpenStreetMap' } },
+  { id: 'logbuch', name: 'Logbuch', sub: 'Notizen mit Datum, Uhrzeit und Kontext', cat: 'Alltag',
+    repo: 'logbuch', web: PAGES + 'logbuch/', shots: 2, colors: ['#0f1420', '#2b3a5e'],
+    text: ['Schnell festhalten, was wann passiert ist: Datum und Uhrzeit sind vorbelegt, ein Kontext (Projekt, Kunde, Ort) ordnet den Eintrag ein.'],
+    features: ['Suche und Filter nach Kontext, #Stichwörter im Text', 'Export als JSON, Text oder CSV für Excel', 'Alle Einträge bleiben lokal im Browser'] },
+];
+const FEATURED = 'wetter';
+const CATS = ['Alle', ...new Set(APPS.map(a => a.cat))];
+
+const $ = s => document.querySelector(s);
+const view = $('#view'), q = $('#q');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const isAndroid = /Android/i.test(navigator.userAgent);
+const apkUrl = a => `${GH}${a.repo}/releases/latest/download/${a.apk}`;
+const platforms = a => (a.apk ? 'Android · ' : '') + 'Web-App';
+const ICON = {
+  dl: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>',
+  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>',
+};
+let cat = 'Alle';
+
+/* ---------- Startseite ---------- */
+function home() {
+  document.title = 'Apps';
+  const f = APPS.find(a => a.id === FEATURED);
+  const term = q.value.trim().toLowerCase();
+  const hit = a => (cat === 'Alle' || a.cat === cat) &&
+    (!term || [a.name, a.sub, a.cat, ...a.text, ...a.features].join(' ').toLowerCase().includes(term));
+  const list = APPS.filter(hit);
+  view.innerHTML = `
+    <h1>Unsere Apps</h1>
+    <p class="lead">Kleine Helfer für Alltag, Wetter und unterwegs – kostenlos, ohne Werbung, ohne Konto.</p>
+    ${term ? '' : `<a class="hero" href="#${f.id}" style="--a1:${f.colors[0]};--a2:${f.colors[1]}">
+      <div>
+        <div class="tag">Empfehlung</div>
+        <h2>${esc(f.sub)}</h2>
+        <p>${esc(f.text[0])}</p>
+        <div class="row"><img src="icons/${f.id}.png" alt="" width="52" height="52">
+          <div><b>${esc(f.name)}</b><small>${platforms(f)}</small></div><span class="get">Ansehen</span></div>
+      </div>
+      <img class="phone" src="screenshots/${f.id}-1.webp" alt="" width="360" height="740">
+    </a>`}
+    <div class="chips" role="group" aria-label="Kategorie">
+      ${CATS.map(c => `<button class="chip" aria-pressed="${c === cat}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}
+    </div>
+    <h3 class="sec">${term ? 'Suchergebnisse' : cat === 'Alle' ? 'Alle Apps' : esc(cat)}</h3>
+    <div class="list">${list.map(row).join('') || '<p class="empty">Keine App gefunden.</p>'}</div>`;
+}
+const row = a => `
+  <a class="item" href="#${a.id}">
+    <img src="icons/${a.id}.png" alt="" width="64" height="64" loading="lazy">
+    <div class="txt"><b>${esc(a.name)}</b><span>${esc(a.sub)}</span><span class="plat">${platforms(a)}</span></div>
+    <span class="get">Ansehen</span>
+  </a>`;
+
+/* ---------- Detailseite ---------- */
+function detail(a) {
+  document.title = a.name + ' – Apps';
+  // Auf Android ist die APK der Hauptknopf, sonst die Web-App
+  const apk = a.apk ? `<a class="get ${isAndroid || !a.web ? 'primary' : ''}" href="${apkUrl(a)}">${ICON.dl}APK laden</a>` : '';
+  const web = a.web ? `<a class="get ${!a.apk || !isAndroid ? 'primary' : ''}" href="${a.web}" target="_blank" rel="noopener">Öffnen</a>` : '';
+  const info = { 'Plattform': a.apk ? 'Android ab 7.0 · Web-App (PWA)' : 'Web-App (PWA) für Android, iOS und Desktop', 'Preis': 'Kostenlos, ohne Werbung', ...(a.info || {}) };
+  view.innerHTML = `
+    <a class="back" href="#">${ICON.back}Apps</a>
+    <div class="head">
+      <img src="icons/${a.id}.png" alt="" width="120" height="120">
+      <div>
+        <h1>${esc(a.name)}</h1>
+        <p class="sub">${esc(a.sub)}</p>
+        <div class="acts">${isAndroid ? apk + web : web + apk}</div>
+      </div>
+    </div>
+    <div class="facts">
+      <div class="fact"><small>Version</small><b id="ver">${a.apk ? '…' : 'Aktuell'}</b><i id="verDate">${a.apk ? '&nbsp;' : 'immer neueste'}</i></div>
+      <div class="fact"><small>Plattform</small><b>${a.apk ? 'Android' : 'Web-App'}</b><i>${a.apk ? '+ Web-App' : 'installierbar'}</i></div>
+      <div class="fact"><small>Preis</small><b>Kostenlos</b><i>ohne Werbung</i></div>
+      <div class="fact"><small>Kategorie</small><b>${esc(a.cat)}</b><i>&nbsp;</i></div>
+      ${a.apk ? '<div class="fact"><small>Größe</small><b id="size">…</b><i>APK</i></div>' : ''}
+    </div>
+    <h3 class="sec">Vorschau</h3>
+    <div class="shots">${Array.from({ length: a.shots }, (_, i) =>
+      `<img src="screenshots/${a.id}-${i + 1}.webp" alt="Screenshot ${i + 1} von ${esc(a.name)}" width="360" height="740" loading="lazy" tabindex="0">`).join('')}</div>
+    <p class="note">Screenshots mit Beispieldaten.</p>
+    <div class="cols">
+      <div class="desc">
+        <h3 class="sec">Beschreibung</h3>
+        ${a.text.map(t => `<p>${esc(t)}</p>`).join('')}
+        <ul>${a.features.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
+      </div>
+      <div>
+        <h3 class="sec">Installieren</h3>
+        ${a.apk ? `<div class="box"><h4>Android-App</h4><ol>
+          <li><a href="${apkUrl(a)}">${esc(a.apk)}</a> herunterladen und antippen.</li>
+          <li>Beim ersten Mal „Installation aus unbekannten Quellen“ für den Browser erlauben.</li>
+          <li>Updates meldet die App selbst.</li></ol></div>` : ''}
+        ${a.web ? `<div class="box"><h4>Web-App</h4><p>Im Browser <a href="${a.web}" target="_blank" rel="noopener">öffnen</a> und über das Menü
+          „App installieren“ bzw. „Zum Startbildschirm“ wählen. Läuft danach wie eine App, auch offline.</p></div>` : ''}
+        <h3 class="sec">Informationen</h3>
+        <dl class="info">
+          ${Object.entries(info).map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}
+          <div><dt>Quelltext</dt><dd><a href="${GH}${a.repo}" rel="noopener">github.com/mohnstollen/${esc(a.repo)}</a></dd></div>
+        </dl>
+      </div>
+    </div>`;
+  if (a.apk) release(a);
+}
+
+/* Version, Datum und Größe der APK aus dem neuesten GitHub-Release (je Sitzung einmal) */
+async function release(a) {
+  const key = 'rel:' + a.repo;
+  let r = null;
+  try { r = JSON.parse(sessionStorage.getItem(key)); } catch { }
+  if (!r) {
+    try {
+      const res = await fetch(`https://api.github.com/repos/mohnstollen/${a.repo}/releases/latest`, { headers: { Accept: 'application/vnd.github+json' } });
+      if (!res.ok) throw new Error(res.status);
+      const d = await res.json(), asset = (d.assets || []).find(x => x.name === a.apk);
+      r = { v: String(d.tag_name || '').replace(/^v/, ''), t: d.published_at, size: asset ? asset.size : 0 };
+      try { sessionStorage.setItem(key, JSON.stringify(r)); } catch { }
+    } catch { r = {}; }
+  }
+  if (location.hash.slice(1) !== a.id) return;   // inzwischen weitergeblättert
+  const set = (id, t) => { const e = document.getElementById(id); if (e) e.textContent = t; };
+  set('ver', r.v || 'Neueste');
+  set('verDate', r.t ? new Date(r.t).toLocaleDateString('de-DE', { day: 'numeric', month: 'short', year: 'numeric' }) : 'GitHub-Release');
+  set('size', r.size ? (r.size / 1048576).toFixed(1).replace('.', ',') + ' MB' : '–');
+}
+
+/* ---------- Navigation ---------- */
+function render() {
+  const a = APPS.find(x => x.id === decodeURIComponent(location.hash.slice(1)));
+  if (a) detail(a); else home();
+}
+addEventListener('hashchange', () => { render(); scrollTo(0, 0); });
+q.addEventListener('input', () => { if (location.hash.length > 1) history.pushState(null, '', location.pathname + location.search); home(); });
+view.addEventListener('click', e => {
+  const c = e.target.closest('.chip');
+  if (c) { cat = c.dataset.cat; home(); return; }
+  const s = e.target.closest('.shots img');
+  if (s) zoom(s);
+});
+view.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('.shots img')) zoom(e.target); });
+function zoom(img) {
+  const z = document.createElement('div');
+  z.className = 'zoom'; z.innerHTML = `<img src="${img.getAttribute('src')}" alt="${esc(img.alt)}">`;
+  const close = () => { z.remove(); removeEventListener('keydown', key); };
+  const key = e => { if (e.key === 'Escape') close(); };
+  z.addEventListener('click', close); addEventListener('keydown', key);
+  document.body.appendChild(z);
+}
+render();
+</script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 /* Service Worker – Aufgabenverwaltung PWA */
-const CACHE = 'aufgaben-v23';
+const CACHE = 'aufgaben-v24';
 const ASSETS = [
   './','./index.html','./manifest.webmanifest',
   './icons/icon-192.png','./icons/icon-512.png','./icons/icon-maskable-512.png',
@@ -16,6 +16,8 @@ self.addEventListener('fetch', e => {
   if (request.method !== 'GET') return;
   // Fremde Server (z. B. Nextcloud-WebDAV) nie aus dem Cache bedienen
   if (new URL(request.url).origin !== self.location.origin) return;
+  // Die App-Übersicht unter apps/ gehört nicht zur Aufgaben-App: immer frisch aus dem Netz
+  if (request.url.startsWith(self.registration.scope + 'apps/')) return;
   e.respondWith(caches.match(request).then(cached => {
     if (cached) return cached;
     return fetch(request).then(resp => {

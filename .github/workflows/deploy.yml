@@ -36,10 +36,11 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Web-App zusammenstellen
-        # Nur die Web-App veröffentlichen (ohne android/, scripts/ usw.)
+        # Nur die Web-App veröffentlichen (ohne android/, scripts/ usw.);
+        # apps/ ist die App-Übersicht und kommt nur auf die Website, nicht in die APK
         run: |
           node scripts/build-web.mjs
-          cp -r .well-known .nojekyll www/
+          cp -r .well-known .nojekyll apps www/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

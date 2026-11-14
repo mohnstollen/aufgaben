@@ -168,6 +168,18 @@ Nach Änderungen an `index.html` immer erst `npm run sync` ausführen.
 > `mohnstollen.github.io`. Hier unter `/aufgaben/` findet Android sie nicht, deshalb zeigt
 > die TWA eine Adressleiste.
 
+## 🛍️ App-Übersicht (`apps/`)
+Unter `https://mohnstollen.github.io/aufgaben/apps/` liegt eine Übersichtsseite im Stil eines App Stores:
+alle Apps mit Icon, Screenshots, Beschreibung und Download (APK aus dem neuesten GitHub-Release bzw. Link
+zur Web-App). Die Seite ist eine einzelne `apps/index.html` ohne Build-Schritt und ohne Abhängigkeiten.
+
+- **App hinzufügen oder ändern:** Eintrag in der Liste `APPS` oben im Skript von `apps/index.html`, dazu
+  das Icon als `apps/icons/<id>.png` und Screenshots als `apps/screenshots/<id>-1.webp`, `-2.webp` …
+  (Hochformat 360 × 740, die Anzahl steht im Eintrag unter `shots`).
+- **Version, Datum und Größe** der APK holt die Seite beim Öffnen aus dem neuesten Release des jeweiligen Repos.
+- Die Seite wird mit GitHub Pages veröffentlicht, steckt aber nicht in der Android-App. Der Service Worker
+  der Aufgaben-App lässt `apps/` aus, damit die Übersicht immer aktuell ist.
+
 ## 🧪 Automatische Tests
 Der Ordner `tests/` enthält Playwright-Tests für die wichtigsten Abläufe:
 - **Sync** gegen einen Nachbau der Nextcloud-WebDAV-Schnittstelle (`tests/helpers/mock-webdav.mjs`):
@@ -192,7 +204,7 @@ Nach Änderungen einfach neu pushen:
 ```bash
 git add -A && git commit -m "Update" && git push
 ```
-Die Service-Worker-Cache-Version steht in `sw.js` (`const CACHE = 'aufgaben-v14'`).
+Die Service-Worker-Cache-Version steht in `sw.js` (`const CACHE = 'aufgaben-v…'`).
 Bei größeren Änderungen die Zahl erhöhen (z. B. `aufgaben-v2`), damit Clients frisch laden.
 
 ## ⌨️ Schnelleingabe
@@ -283,6 +295,7 @@ aufgaben/
 ├─ capacitor.config.json    # Konfiguration der Android-App
 ├─ scripts/build-web.mjs    # kopiert die Web-App nach www/
 ├─ tests/                   # Playwright-Tests (npm test)
+├─ apps/                    # App-Übersicht im Store-Stil (nur Website, nicht in der APK)
 ├─ android/                 # natives Android-Projekt (inkl. WebDAV-Plugin)
 ├─ .gitignore
 ├─ README.md

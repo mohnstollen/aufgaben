@@ -24,7 +24,7 @@ Gerät (Local Storage) – kein Konto, kein Tracking. Optional lassen sie sich �
 - **Helles und dunkles Design** (automatisch nach Systemeinstellung oder fest wählbar)
 - Zurück-Taste schließt offene Dialoge
 - **Export/Import** als JSON-Backup oder todo.txt
-- **Nextcloud-Sync** per WebDAV (optional)
+- **Nextcloud-Sync** per WebDAV (optional), auf Wunsch auch mit **Nextcloud Tasks**
 - **PWA**: installierbar, offline nutzbar
 
 ---
@@ -176,6 +176,8 @@ Der Ordner `tests/` enthält Playwright-Tests für die wichtigsten Abläufe:
   Backups, Teilen, Update-Prüfung
 - **Anmeldung**: Login Flow v2, Anmelde-QR-Code – der Scan läuft Ende-zu-Ende über eine
   simulierte Kamera, die ein Bild mit QR-Code liefert
+- **Nextcloud Tasks** gegen einen CalDAV-Nachbau: Hochladen aller Felder, Änderungen in beide Richtungen,
+  Konflikte, Löschen, Wiederholungen, zwei Geräte mit Sync-Datei, Einrichtung im Dialog
 - **Bedienung**: Gruppierung, Schnelleingabe, Bearbeiten, Rückgängig, Wischen, Filter, Design
 
 In GitHub Actions laufen sie bei jedem Pull Request und vor jedem APK-Build und Pages-Deploy
@@ -192,7 +194,7 @@ Nach Änderungen einfach neu pushen:
 ```bash
 git add -A && git commit -m "Update" && git push
 ```
-Die Service-Worker-Cache-Version steht in `sw.js` (`const CACHE = 'aufgaben-v14'`).
+Die Service-Worker-Cache-Version steht in `sw.js` (`const CACHE = 'aufgaben-v…'`).
 Bei größeren Änderungen die Zahl erhöhen (z. B. `aufgaben-v2`), damit Clients frisch laden.
 
 ## ⌨️ Schnelleingabe
@@ -260,6 +262,34 @@ Benutzerkonto nehmen, nicht das Admin-Konto.
 - Zugangsdaten liegen nur im Local Storage des jeweiligen Geräts.
 - Die Nextcloud muss per **https://** erreichbar sein: Eine HTTPS-Seite darf keine
   unverschlüsselten Adressen aufrufen.
+
+## ✅ Abgleich mit Nextcloud Tasks
+Zusätzlich oder statt der Sync-Datei kann die App die Aufgaben mit einer Aufgabenliste der Nextcloud
+abgleichen (CalDAV). Sie erscheinen dann in der Nextcloud-App **Tasks** und in jeder anderen CalDAV-App
+(z. B. Tasks.org, Thunderbird) und lassen sich dort ansehen, bearbeiten, abhaken, anlegen und löschen.
+
+**Einschalten:** ⚙️ Einstellungen → Nextcloud-Sync → „Mit Nextcloud Tasks abgleichen“. Ohne Auswahl nimmt die
+App die Liste „Aufgaben“ und legt sie bei Bedarf an; über „Listen laden“ lässt sich eine vorhandene Liste wählen.
+Die Sync-Datei kann daneben eingeschaltet bleiben (empfohlen bei mehreren Geräten mit dieser App) oder
+abgeschaltet werden.
+
+| In der App | In Nextcloud Tasks |
+|---|---|
+| Name, Notiz | Titel, Beschreibung |
+| Fälligkeitsdatum | Fällig (ganztägig; eine dort gesetzte Uhrzeit bleibt erhalten) |
+| Priorität Hoch / Mittel / Niedrig | Priorität 1–4 / keine oder 5 / 6–9 |
+| Tags | Kategorien |
+| Erledigt | Abgeschlossen |
+| Schnellaufgabe, Wiederholung | eigene Felder `X-AUFGABEN-QUICK`, `X-AUFGABEN-REC` (in Tasks nicht sichtbar) |
+
+- Beim Zurückschreiben ändert die App nur die Felder, die sich unterscheiden. Erinnerungen, Unteraufgaben,
+  Startdatum und alles andere, was die Nextcloud an einer Aufgabe speichert, bleiben erhalten.
+- Wurde eine Aufgabe auf beiden Seiten geändert, gewinnt die jüngere Änderung.
+- Wird eine wiederkehrende Aufgabe in der Nextcloud abgehakt, legt die App beim nächsten Abgleich die
+  nächste an. Die Wiederholung selbst kennt Nextcloud Tasks nicht.
+- Erledigtes, das älter als 30 Tage ist, wird nicht mehr neu hochgeladen.
+- **Android-App:** funktioniert ohne weitere Einrichtung. **Im Browser** nur, wenn die Nextcloud
+  CalDAV-Zugriffe von der Seite erlaubt (CORS) – ob „WebAppPassword“ das abdeckt, hängt von dessen Version ab.
 
 ## 💾 Speicher
 Die Aufgabenliste liegt im lokalen Speicher des Browsers bzw. der App (Platz für weit über

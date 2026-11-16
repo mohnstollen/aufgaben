@@ -17,6 +17,10 @@ Gerät (Local Storage) – kein Konto, kein Tracking. Optional lassen sie sich �
 - Antippen öffnet eine Aufgabe zum Bearbeiten
 - Auf dem Handy **wischen**: nach rechts = erledigt, nach links = löschen
 - Löschen und Abhaken lassen sich per **„Rückgängig“** zurücknehmen
+- **☑ Listen-Vorlagen** (z. B. Packliste „Dienstreise“): „Starten“ legt eine Aufgabe mit eigener Checkliste an,
+  die Vorlage bleibt unverändert; Einträge hinzufügen/entfernen, „In Vorlage übernehmen“, Fortschritt auf der Karte
+  und im Android-Widget. Schnelleingabe: `!Dienstreise Hamburg morgen`. Vorlagen und Häkchen werden mit synchronisiert
+  (paralleles Abhaken auf zwei Geräten wird Eintrag für Eintrag zusammengeführt)
 - **Wiederkehrende Aufgaben** (täglich, wöchentlich, monatlich …): beim Abhaken entsteht die nächste
 - **Verschieben**: Fälligkeitsdatum antippen → Heute, Morgen, Nächsten Montag, In 1 Woche, Datum wählen;
   bei überfälligen Aufgaben „Alle auf heute“

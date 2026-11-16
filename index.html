@@ -134,6 +134,20 @@
   button.badge{border:none; font-family:inherit; cursor:pointer}
   button.badge.due::after{content:"▾"; opacity:.6; font-size:10px}
   .badge.rec{background:var(--c-blue-bg); color:var(--c-blue)}
+  .badge.cl{background:var(--c-violet-bg, var(--surface2)); color:var(--c-violet)}
+  .badge.cl.full{background:var(--c-green-bg, var(--surface2)); color:var(--c-green)}
+  .tpl-item{display:flex; align-items:center; gap:8px; padding:10px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; margin-bottom:8px}
+  .tpl-item .tpl-name{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis}
+  .tpl-item .tpl-n{font-size:12px; color:var(--muted)}
+  .cl-bar{height:6px; border-radius:3px; background:var(--surface2); overflow:hidden; margin:0 0 14px}
+  .cl-bar>div{height:100%; background:var(--accent); transition:width .2s}
+  .cl-list{list-style:none; margin:0 0 12px; padding:0}
+  .cl-list li{display:flex; align-items:center; gap:10px; padding:8px 4px; border-bottom:1px solid var(--border)}
+  .cl-list label{flex:1; display:flex; align-items:center; gap:10px; cursor:pointer; font-size:15px; min-width:0; overflow-wrap:anywhere}
+  .cl-list input[type=checkbox]{width:20px; height:20px; accent-color:var(--accent); flex:none}
+  .cl-list li.done label{color:var(--muted); text-decoration:line-through}
+  .cl-add{display:flex; gap:8px; margin-bottom:12px}
+  .cl-add input{flex:1; min-width:0; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-size:16px}
   .pp-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px}
   .pp-grid .btn{display:flex; flex-direction:column; align-items:flex-start; gap:2px; text-align:left; margin:0}
   .pp-grid small{font-size:11.5px; color:var(--muted); font-weight:400}
@@ -317,6 +331,7 @@
         <option value="created">Nach Erstellung</option>
       </select>
     </div>
+    <button type="button" class="hbtn" id="tplBtn" title="Listen-Vorlagen" aria-label="Listen-Vorlagen"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8l1.5 1.5L12 7M8 14l1.5 1.5L12 13M14 8h3M14 14h3"/></svg></button>
     <button type="button" class="hbtn" id="settingsBtn" title="Einstellungen" aria-label="Einstellungen"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg></button>
   </div>
 </header>
@@ -350,6 +365,50 @@
 <button class="fab" id="fab" title="Neue Aufgabe" aria-label="Neue Aufgabe">+</button>
 <div class="toast" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button type="button" id="toastAction" hidden></button></div>
 
+<!-- Listen-Vorlagen -->
+<div class="overlay" id="tplOverlay">
+  <div class="modal">
+    <h2>☑ Listen-Vorlagen</h2>
+    <p class="hint" style="font-size:12.5px; margin:-8px 0 14px">Wiederverwendbare Checklisten, z. B. „Dienstreise“. „Starten“ legt eine Aufgabe mit
+      eigener Checkliste an – die Vorlage bleibt unverändert. Schnelleingabe: <code>!Dienstreise morgen</code></p>
+    <div id="tplList"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="tplNew" style="margin-right:auto">+ Neue Vorlage</button>
+      <button class="btn primary" id="tplClose">Fertig</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="tplEditOverlay">
+  <div class="modal">
+    <h2 id="tplEditTitle">Vorlage</h2>
+    <input type="hidden" id="tplId">
+    <div class="field"><label for="tplName">Name *</label><input type="text" id="tplName" placeholder="z. B. Dienstreise"></div>
+    <div class="field"><label for="tplItems">Einträge – einer pro Zeile</label>
+      <textarea id="tplItems" rows="10" placeholder="Laptop + Ladegerät&#10;Zahnbürste&#10;Bahnticket"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="tplDelete" style="margin-right:auto; color:var(--c-red)">Löschen</button>
+      <button class="btn ghost" id="tplEditCancel">Abbrechen</button>
+      <button class="btn primary" id="tplSave">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="clOverlay">
+  <div class="modal">
+    <h2 id="clTitle"></h2>
+    <p class="hint" id="clMeta" style="font-size:12.5px; margin:-10px 0 10px"></p>
+    <div class="cl-bar"><div id="clBar"></div></div>
+    <ul class="cl-list" id="clList"></ul>
+    <div class="cl-add"><input type="text" id="clAddInput" placeholder="Eintrag hinzufügen …" enterkeyhint="done" autocomplete="off"><button class="btn ghost" id="clAddBtn" aria-label="Hinzufügen">+</button></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="clToTpl" style="margin-right:auto">In Vorlage übernehmen</button>
+      <button class="btn ghost" id="clEdit">Bearbeiten</button>
+      <button class="btn primary" id="clClose">Schließen</button>
+    </div>
+  </div>
+</div>
+
 <!-- Task Modal -->
 <div class="overlay" id="taskOverlay">
   <div class="modal">
@@ -373,6 +432,13 @@
       <div class="field">
         <label>Name der Aufgabe *</label>
         <input type="text" id="fName" placeholder="Was ist zu tun?">
+      </div>
+      <div class="field" id="fTplRow">
+        <label for="fTpl">☑ Checkliste aus Vorlage</label>
+        <select id="fTpl"></select>
+      </div>
+      <div class="field" id="fClRow" style="display:none">
+        <button type="button" class="btn ghost block" id="fClOpen">☑ Checkliste öffnen <span class="hint" id="fClInfo" style="margin:0 0 0 auto"></span></button>
       </div>
       <label class="quick-toggle"><input type="checkbox" id="fIsQuick"> ⚡ Schnellaufgabe – nur der Text, ohne Datum, Priorität und Tags</label>
       <div id="fullFields">
@@ -710,7 +776,9 @@ if(IS_NATIVE) document.documentElement.classList.add('native');
 const TOMBSTONE_DAYS = 180;
 /* tombstones: { taskId: gelöschtAm }, listLog: { 'p:Name'|'t:Name': {ts, del} } – nötig für den Sync */
 /* projects bleibt als leere Liste in den Daten, damit ältere App-Versionen die Sync-Datei weiter lesen können */
-const defaultData = { tasks:[], projects:[], tags:[], tombstones:{}, listLog:{} };
+/* templates: Listen-Vorlagen { id, name, items:[Text], updatedAt }. Eine Aufgabe mit checklist:[{id,text,done,ts}]
+   ist ein „Durchlauf“ einer Vorlage (tpl = Vorlagen-ID). Gelöschte Vorlagen landen wie Aufgaben in tombstones. */
+const defaultData = { tasks:[], projects:[], tags:[], tombstones:{}, listLog:{}, templates:[] };
 let data = load();
 let snapshot = takeSnapshot(data);
 
@@ -728,6 +796,8 @@ function normalizeData(d){
   if(!Array.isArray(d.tags)) d.tags=[];
   if(!d.tombstones || typeof d.tombstones!=='object') d.tombstones={};
   if(!d.listLog || typeof d.listLog!=='object') d.listLog={};
+  if(!Array.isArray(d.templates)) d.templates=[];
+  d.templates.forEach(x=>{ if(!x.id) x.id=uid(); if(!Array.isArray(x.items)) x.items=[]; if(!x.updatedAt) x.updatedAt=0; });
   d.tasks.forEach(t=>{ if(!t.id) t.id=uid(); if(!t.updatedAt) t.updatedAt=t.doneAt||t.created||0; });
   return migrateProjects(d);
 }
@@ -763,7 +833,8 @@ function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(
    ein neues updatedAt, entfernte einen Tombstone; neue/entfernte Tags & Projekte landen im listLog. */
 function taskSig(t){ const { updatedAt, ...rest } = t; return JSON.stringify(rest); }
 function takeSnapshot(d){
-  return { tasks:new Map(d.tasks.map(t=>[t.id, taskSig(t)])), projects:new Set(d.projects), tags:new Set(d.tags) };
+  return { tasks:new Map(d.tasks.map(t=>[t.id, taskSig(t)])), templates:new Map((d.templates||[]).map(x=>[x.id, taskSig(x)])),
+    projects:new Set(d.projects), tags:new Set(d.tags) };
 }
 function trackChanges(){
   const now=Date.now(); const ids=new Set();
@@ -772,6 +843,12 @@ function trackChanges(){
     if(snapshot.tasks.get(t.id)!==taskSig(t)){ t.updatedAt=now; delete data.tombstones[t.id]; }
   });
   snapshot.tasks.forEach((_,id)=>{ if(!ids.has(id)) data.tombstones[id]=now; });
+  const tids=new Set();
+  data.templates.forEach(x=>{
+    tids.add(x.id);
+    if(snapshot.templates.get(x.id)!==taskSig(x)){ x.updatedAt=now; delete data.tombstones[x.id]; }
+  });
+  snapshot.templates.forEach((_,id)=>{ if(!tids.has(id)) data.tombstones[id]=now; });
   [['p','projects'],['t','tags']].forEach(([k,key])=>{
     const cur=new Set(data[key]);
     cur.forEach(n=>{ if(!snapshot[key].has(n)) data.listLog[k+':'+n]={ ts:now, del:false }; });
@@ -793,8 +870,11 @@ function mergeData(a,b){
   Object.keys(tombstones).forEach(id=>{ if(tombstones[id]<minTs) delete tombstones[id]; });
 
   const map=new Map();
-  [...a.tasks, ...(b.tasks||[])].forEach(t=>{ const ex=map.get(t.id); map.set(t.id, ex?newerTask(ex,t):t); });
+  [...a.tasks, ...(b.tasks||[])].forEach(t=>{ const ex=map.get(t.id); map.set(t.id, ex?mergeTask(ex,t):t); });
   const tasks=[...map.values()].filter(t=>!(tombstones[t.id]>=(t.updatedAt||0))).map(t=>({...t}));
+  const tmap=new Map();
+  [...(a.templates||[]), ...(b.templates||[])].forEach(x=>{ const ex=tmap.get(x.id); tmap.set(x.id, ex?newerTask(ex,x):x); });
+  const templates=[...tmap.values()].filter(x=>!(tombstones[x.id]>=(x.updatedAt||0))).map(x=>({...x, items:[...x.items]}));
 
   const listLog={...a.listLog};
   Object.entries(b.listLog||{}).forEach(([k,e])=>{ if(!listLog[k] || e.ts>listLog[k].ts) listLog[k]=e; });
@@ -806,13 +886,26 @@ function mergeData(a,b){
   };
   const projects=mergeList('p', a.projects, b.projects||[], tasks.map(t=>t.project));
   const tags=mergeList('t', a.tags, b.tags||[], tasks.flatMap(t=>t.tags||[]));
-  return migrateProjects({ tasks, projects, tags, tombstones, listLog });
+  return migrateProjects({ tasks, projects, tags, tombstones, listLog, templates });
+}
+/* Zwei Stände derselben Aufgabe: die jüngere gewinnt – bei Checklisten aber Eintrag für Eintrag,
+   damit paralleles Abhaken auf zwei Geräten nicht verloren geht. */
+function mergeTask(a,b){
+  const win=newerTask(a,b), lose=win===a?b:a;
+  if(!Array.isArray(win.checklist) || !Array.isArray(lose.checklist)) return win;
+  const other=new Map(lose.checklist.map(i=>[i.id,i]));
+  const items=win.checklist.map(i=>{ const o=other.get(i.id); return o && (o.ts||0)>(i.ts||0) ? o : i; });
+  const have=new Set(items.map(i=>i.id));
+  // nur im älteren Stand vorhanden: behalten, wenn dort nach dem letzten Stand des Gewinners geändert/angelegt
+  lose.checklist.forEach(i=>{ if(!have.has(i.id) && (i.ts||0)>(win.updatedAt||0)) items.push(i); });
+  if(JSON.stringify(items)===JSON.stringify(win.checklist)) return win;
+  return { ...win, checklist:items, updatedAt:Math.max(a.updatedAt||0, b.updatedAt||0)+1 };
 }
 /* Reihenfolge-unabhängige Darstellung, um "hat sich etwas geändert?" zu prüfen */
 function canon(d){
   const sortObj=o=>Object.keys(o||{}).sort().map(k=>[k,o[k]]);
   return JSON.stringify([ [...d.tasks].sort((x,y)=>x.id<y.id?-1:1), [...d.projects].sort(), [...d.tags].sort(),
-    sortObj(d.tombstones), sortObj(d.listLog) ]);
+    sortObj(d.tombstones), sortObj(d.listLog), [...(d.templates||[])].sort((x,y)=>x.id<y.id?-1:1) ]);
 }
 
 /* ---------- State ---------- */
@@ -1204,6 +1297,8 @@ function taskCard(t){
   const recBadge = t.rec ? `<span class="badge rec" title="Wiederholt sich ${describeRec(t.rec)}">🔁 ${describeRec(t.rec)}</span>` : '';
   const tagBadges = (t.tags||[]).map(tg=>`<span class="badge tag">#${escapeHtml(tg)}</span>`).join('');
   const note = t.note ? `<div class="tnote">${escapeHtml(t.note)}</div>` : '';
+  const cl = clProgress(t);
+  const clBadge = cl ? `<span class="badge cl${cl.done===cl.total?' full':''}" title="Checkliste">☑ ${cl.done}/${cl.total}</span>` : '';
   wrap.innerHTML = `
     <div class="swipe-bg" aria-hidden="true"><span class="sb-l">${t.done?'↺ Wieder öffnen':'✓ Erledigt'}</span><span class="sb-r">🗑 Löschen</span></div>
     <div class="task ${t.quick?'is-quick':'prio-'+t.prio}${t.done?' done':''}">
@@ -1216,7 +1311,7 @@ function taskCard(t){
         ${t.quick ? '' : `${note}
         <div class="meta">
           <span class="badge prio-${t.prio}">${prioIcon(t.prio)} ${t.prio}</span>
-          ${dueBadge}${recBadge}${tagBadges}
+          ${clBadge}${dueBadge}${recBadge}${tagBadges}
         </div>`}
       </div>
       <div class="tactions">
@@ -1229,7 +1324,7 @@ function taskCard(t){
   card.querySelector('[data-act=toggle]').onclick = ()=>toggleDone(t.id);
   card.querySelector('[data-act=edit]').onclick = e=>{
     if(card.dataset.swiped) return;
-    if(e.target.closest('[data-act=postpone]')) openPostpone([t.id]); else openTask(t.id);
+    if(e.target.closest('[data-act=postpone]')) openPostpone([t.id]); else if(t.checklist) openChecklist(t.id); else openTask(t.id);
   };
   card.querySelector('[data-act=del]').onclick = ()=>delTask(t.id);
   attachSwipe(wrap, card, t);
@@ -1286,6 +1381,7 @@ function spawnNext(t){
   if(data.tasks.some(x=>x.id===id2)) return null;
   const spawned={ ...t, id:id2, due, done:false, doneAt:null, created:Date.now() };
   delete spawned.updatedAt;
+  if(t.checklist) spawned.checklist=t.checklist.map(i=>({ ...i, id:uid(), done:false, ts:Date.now() }));
   data.tasks.push(spawned);
   return spawned;
 }
@@ -1310,6 +1406,14 @@ function toggleDone(id){
 function addFromText(text, created=Date.now()){
   const raw=String(text||'').trim(); if(!raw) return null;
   const p=parseQuick(raw);
+  if(p.tpl){
+    const x=findTemplate(p.tpl);
+    if(x){
+      const t=taskFromTemplate(x, { due:p.due, prio:p.prio, tags:p.tags, created, name:p.name });
+      save(); renderFilters(); render();
+      return t;
+    }
+  }
   const plain = !p.due && !p.prio && !p.tags.length && !p.rec;
   const t={ id:uid(), name: plain ? raw : (p.name||raw), due:p.due, prio:p.prio||'Mittel', tags:p.tags,
     done:false, doneAt:null, created };
@@ -1353,7 +1457,8 @@ function widgetPayload(){
     .sort((a,b)=>order[a.k]-order[b.k] || (a.k==='quick' ? a.t.created-b.t.created : cmpDue(a.t,b.t)||cmpPrio(a.t,b.t)))
     .slice(0, 60)
     .map(({ t, k })=>({ id:t.id, name:t.name, kind:k,
-      label: k==='quick' ? '⚡ Schnell' : (k==='overdue' ? 'Überfällig · '+relDue(t.due) : 'Heute') + (t.prio==='Hoch' ? ' · 🔴 Hoch' : '') }));
+      label: (k==='quick' ? '⚡ Schnell' : (k==='overdue' ? 'Überfällig · '+relDue(t.due) : 'Heute') + (t.prio==='Hoch' ? ' · 🔴 Hoch' : ''))
+        + (clProgress(t) ? ` · ☑ ${clProgress(t).done}/${clProgress(t).total}` : '') }));
   return JSON.stringify({ open:open.length, items });
 }
 function pushWidget(){
@@ -1431,7 +1536,7 @@ function parseDateWord(w){
   return null;
 }
 function parseQuick(text){
-  let due=null, prio=null, rec=null; const tags=[], nameWords=[];
+  let due=null, prio=null, rec=null, tpl=null; const tags=[], nameWords=[];
   for(const w of (text||'').split(/\s+/).filter(Boolean)){
     const pm=w.match(/^\(([A-Ca-c])\)$/);
     if(pm && !prio){ prio=LETTER_TO_PRIO[pm[1].toUpperCase()]; continue; }
@@ -1440,10 +1545,11 @@ function parseQuick(text){
     if(!rec && lw.startsWith('rec:') && parseRec(lw.slice(4))){ rec=parseRec(lw.slice(4)).value; continue; }
     const d=!due && parseDateWord(w);
     if(d){ due=d; continue; }
+    if(w.length>1 && w[0]==='!' && !tpl){ tpl=w.slice(1); continue; }
     if(w.length>1 && '#@+'.includes(w[0])){ const tg=w.slice(1); if(!tags.includes(tg)) tags.push(tg); continue; }
     nameWords.push(w);
   }
-  return { name:nameWords.join(' '), due, prio, tags, rec };
+  return tpl ? { name:nameWords.join(' '), due, prio, tags, rec, tpl } : { name:nameWords.join(' '), due, prio, tags, rec };
 }
 function syncQuickToFields(){
   const parsed = parseQuick($('fQuick').value);
@@ -1472,7 +1578,7 @@ function refreshRecSelect(sel){
   $('fRec').innerHTML=list.map(x=>`<option value="${x}"${x===v?' selected':''}>${x ? describeRec(x).replace(/^./,c=>c.toUpperCase()) : 'Nie'}</option>`).join('');
 }
 function setQuickMode(on){ $('fIsQuick').checked=on; $('fullFields').style.display = on ? 'none' : ''; }
-function openTask(id){
+function openTask(id, opts={}){
   $('fQuick').value=''; $('quickPreview').innerHTML='';
   if(id){
     const t = data.tasks.find(x=>x.id===id);
@@ -1482,12 +1588,18 @@ function openTask(id){
     $('fTags').value=(t.tags||[]).join(', '); $('fNote').value=t.note||'';
     refreshRecSelect(t.rec); setQuickMode(!!t.quick);
     $('deleteTaskBtn').style.display='';
+    $('fTplRow').style.display='none';
+    $('fClRow').style.display = t.checklist ? '' : 'none';
+    $('fClInfo').textContent = t.checklist ? `${clProgress(t).done} von ${clProgress(t).total} abgehakt` : '';
   }else{
     $('taskModalTitle').textContent='Neue Aufgabe';
     $('quickBox').style.display='block'; $('toggleDetails').style.display='block'; $('detailsBox').classList.remove('show');
     $('taskId').value=''; $('fName').value=''; $('fDue').value=''; $('fPrio').value='Mittel';
     $('fTags').value=''; $('fNote').value=''; refreshRecSelect(''); setQuickMode(false);
     $('deleteTaskBtn').style.display='none';
+    $('fClRow').style.display='none';
+    refreshTplSelect(opts.tpl||'');
+    if(opts.tpl){ const x=data.templates.find(y=>y.id===opts.tpl); if(x){ $('detailsBox').classList.add('show'); $('fName').value=x.name; } }
   }
   $('taskOverlay').classList.add('show');
   if(!id) setTimeout(()=>$('fQuick').focus(), 50);   // beim Bearbeiten keine Tastatur aufpoppen lassen
@@ -1505,7 +1617,11 @@ function saveTask(){
   const fields = { name, due:$('fDue').value||null, prio:$('fPrio').value, tags };
   let task = existing;
   if(existing){ Object.assign(existing, fields); }
-  else{ task = { id:uid(), ...fields, done:false, doneAt:null, created:Date.now() }; data.tasks.push(task); }
+  else{
+    task = { id:uid(), ...fields, done:false, doneAt:null, created:Date.now() }; data.tasks.push(task);
+    const x=data.templates.find(y=>y.id===$('fTpl').value);
+    if(x){ task.tpl=x.id; task.checklist=x.items.map(text=>({ id:uid(), text, done:false, ts:Date.now() })); }
+  }
   if(note) task.note=note; else delete task.note;
   const rec=parseRec($('fRec').value)?.value;
   if(rec) task.rec=rec; else delete task.rec;
@@ -1513,7 +1629,125 @@ function saveTask(){
     Object.assign(task, { due:null, prio:'Mittel', tags:[], quick:true });
     delete task.note; delete task.rec;
   }else delete task.quick;
+  if(task.checklist) delete task.quick;
   save(); closeTask(); renderFilters(); render();
+}
+
+/* ---------- Listen: Vorlagen und Checklisten ---------- */
+function clProgress(t){
+  if(!Array.isArray(t.checklist) || !t.checklist.length) return null;
+  return { done:t.checklist.filter(i=>i.done).length, total:t.checklist.length };
+}
+function findTemplate(name){
+  const n=String(name||'').toLowerCase();
+  return data.templates.find(x=>x.name.toLowerCase()===n)
+    || data.templates.find(x=>x.name.toLowerCase().replace(/\s+/g,'').startsWith(n));
+}
+function taskFromTemplate(x, { due=null, prio=null, tags=[], created=Date.now(), name='' }={}){
+  const t={ id:uid(), name: name ? `${x.name} ${name}` : x.name, due, prio:prio||'Mittel', tags:[...tags], done:false, doneAt:null, created,
+    tpl:x.id, checklist:x.items.map(text=>({ id:uid(), text, done:false, ts:created })) };
+  tags.forEach(tg=>{ if(!data.tags.includes(tg)) data.tags.push(tg); });
+  data.tasks.push(t);
+  return t;
+}
+function refreshTplSelect(sel){
+  const s=$('fTpl');
+  s.innerHTML='<option value="">– keine –</option>'+data.templates.map(x=>`<option value="${escapeAttr(x.id)}">${escapeHtml(x.name)} (${x.items.length})</option>`).join('');
+  s.value=sel; $('fTplRow').style.display = data.templates.length ? '' : 'none';
+}
+function openTemplates(){ renderTemplates(); $('tplOverlay').classList.add('show'); }
+function closeTemplates(){ $('tplOverlay').classList.remove('show'); }
+function renderTemplates(){
+  const el=$('tplList'); el.innerHTML='';
+  if(!data.templates.length){ el.innerHTML='<div class="empty" style="padding:18px 0">Noch keine Vorlagen.</div>'; return; }
+  [...data.templates].sort((a,b)=>a.name.localeCompare(b.name,'de')).forEach(x=>{
+    const row=document.createElement('div'); row.className='tpl-item';
+    row.innerHTML=`<div class="tpl-name">${escapeHtml(x.name)} <span class="tpl-n">· ${x.items.length} Einträge</span></div>
+      <button class="iconbtn" data-a="edit" title="Bearbeiten" aria-label="Bearbeiten: ${escapeAttr(x.name)}">✏️</button>
+      <button class="btn primary" data-a="start" style="padding:8px 12px">▶ Starten</button>`;
+    row.querySelector('[data-a=edit]').onclick=()=>openTplEdit(x.id);
+    row.querySelector('[data-a=start]').onclick=()=>{ closeTemplates(); openTask(null, { tpl:x.id }); };
+    el.appendChild(row);
+  });
+}
+function openTplEdit(id, preset){
+  const x=id && data.templates.find(y=>y.id===id);
+  $('tplEditTitle').textContent = x ? 'Vorlage bearbeiten' : 'Neue Vorlage';
+  $('tplId').value = x ? x.id : '';
+  $('tplName').value = x ? x.name : (preset?.name||'');
+  $('tplItems').value = (x ? x.items : (preset?.items||[])).join('\n');
+  $('tplDelete').style.display = x ? '' : 'none';
+  $('tplEditOverlay').classList.add('show');
+  if(!x) setTimeout(()=>$('tplName').focus(), 50);
+}
+function closeTplEdit(){ $('tplEditOverlay').classList.remove('show'); }
+function saveTplEdit(){
+  const name=$('tplName').value.trim(); if(!name){ $('tplName').focus(); return; }
+  const items=$('tplItems').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const id=$('tplId').value; const x=id && data.templates.find(y=>y.id===id);
+  if(x) Object.assign(x, { name, items }); else data.templates.push({ id:uid(), name, items });
+  save(); closeTplEdit(); renderTemplates();
+}
+function deleteTpl(){
+  const id=$('tplId').value; const x=data.templates.find(y=>y.id===id); if(!x) return;
+  const idx=data.templates.indexOf(x);
+  data.templates.splice(idx,1); save(); closeTplEdit(); renderTemplates();
+  toast(`Vorlage „${shortName(x.name)}" gelöscht`, { onAction:()=>{ data.templates.splice(idx,0,x); save(); renderTemplates(); } });
+}
+
+let clTaskId=null;
+function openChecklist(id){ clTaskId=id; renderChecklist(); $('clOverlay').classList.add('show'); }
+function closeChecklist(){ $('clOverlay').classList.remove('show'); clTaskId=null; }
+function clTask(){ return data.tasks.find(t=>t.id===clTaskId); }
+function renderChecklist(){
+  const t=clTask(); if(!t){ closeChecklist(); return; }
+  if(!t.checklist) t.checklist=[];
+  const p=clProgress(t)||{ done:0, total:0 };
+  $('clTitle').textContent=t.name;
+  $('clMeta').textContent=[t.due ? '📅 '+relDue(t.due) : '', `${p.done} von ${p.total} abgehakt`, t.done ? '✓ erledigt' : ''].filter(Boolean).join(' · ');
+  $('clBar').style.width = p.total ? (100*p.done/p.total)+'%' : '0';
+  const ul=$('clList'); ul.innerHTML='';
+  // offene zuerst, erledigte rutschen nach unten
+  [...t.checklist.filter(i=>!i.done), ...t.checklist.filter(i=>i.done)].forEach(i=>{
+    const li=document.createElement('li'); if(i.done) li.className='done';
+    li.innerHTML=`<label><input type="checkbox" ${i.done?'checked':''}><span>${escapeHtml(i.text)}</span></label>
+      <button class="iconbtn" title="Entfernen" aria-label="Entfernen: ${escapeAttr(i.text)}">✕</button>`;
+    li.querySelector('input').onchange=e=>clToggle(i.id, e.target.checked);
+    li.querySelector('button').onclick=()=>clRemove(i.id);
+    ul.appendChild(li);
+  });
+  const x=t.tpl && data.templates.find(y=>y.id===t.tpl);
+  $('clToTpl').textContent = x ? 'In Vorlage übernehmen' : 'Als Vorlage speichern';
+}
+function clToggle(itemId, done){
+  const t=clTask(); const i=t?.checklist.find(y=>y.id===itemId); if(!i) return;
+  i.done=done; i.ts=Date.now(); save(); renderChecklist(); render();
+  const p=clProgress(t);
+  if(done && p.done===p.total && !t.done)
+    toast('Alles abgehakt 🎉', { actionLabel:'Aufgabe erledigen', onAction:()=>{ closeChecklist(); toggleDone(t.id); } });
+}
+function clRemove(itemId){
+  const t=clTask(); if(!t) return;
+  const idx=t.checklist.findIndex(y=>y.id===itemId); if(idx<0) return;
+  const [it]=t.checklist.splice(idx,1); save(); renderChecklist(); render();
+  toast(`„${shortName(it.text)}" entfernt`, { onAction:()=>{ const x=data.tasks.find(y=>y.id===t.id); if(!x) return; x.checklist.splice(idx,0,{ ...it, ts:Date.now() }); save(); renderChecklist(); render(); } });
+}
+function clAdd(){
+  const t=clTask(); const text=$('clAddInput').value.trim(); if(!t || !text) return;
+  t.checklist.push({ id:uid(), text, done:false, ts:Date.now() }); $('clAddInput').value='';
+  save(); renderChecklist(); render(); $('clAddInput').focus();
+}
+/* Einträge dieses Durchlaufs in die Vorlage übernehmen (ohne Häkchen) bzw. neue Vorlage daraus machen */
+function clToTemplate(){
+  const t=clTask(); if(!t) return;
+  const items=t.checklist.map(i=>i.text);
+  const x=t.tpl && data.templates.find(y=>y.id===t.tpl);
+  if(x){
+    if(!confirm(`Vorlage „${x.name}" durch die ${items.length} Einträge dieser Liste ersetzen?`)) return;
+    x.items=items; save(); toast(`Vorlage „${shortName(x.name)}" aktualisiert`);
+  }else{
+    closeChecklist(); openTplEdit(null, { name:t.name, items });
+  }
 }
 
 /* ---------- Settings modal ---------- */
@@ -1551,7 +1785,7 @@ function deleteTag(tg){
 /* ---------- Export ---------- */
 function exportData(){
   const payload = { app:'Aufgabenverwaltung', version:1, exportedAt:new Date().toISOString(),
-    data:{ tasks:data.tasks, projects:data.projects, tags:data.tags } };
+    data:{ tasks:data.tasks, projects:data.projects, tags:data.tags, templates:data.templates } };
   downloadText(JSON.stringify(payload,null,2), `aufgaben-backup_${toDateStr(Date.now())}.json`, 'application/json');
   toast(`JSON-Backup exportiert: ${data.tasks.length} Aufgabe(n).`);
 }
@@ -1576,11 +1810,12 @@ function handleImportFile(e){
         try{ const parsed=JSON.parse(content); const d=parsed.data&&parsed.data.tasks?parsed.data:parsed;
           if(!Array.isArray(d.tasks)) throw new Error('json');
           pending=migrateProjects({ tasks:d.tasks.map(t=>({...t})), projects:Array.isArray(d.projects)?d.projects:[], tags:Array.isArray(d.tags)?d.tags.slice():[] });
+          pending.templates=Array.isArray(d.templates)?d.templates.filter(x=>x&&x.name&&Array.isArray(x.items)).map(x=>({...x, id:x.id||uid(), items:[...x.items]})):[];
         }catch(_){ pending=parseTodoTxtFile(content); }
       }
       pendingImport=pending;
       const fmt=isTxt?'todo.txt':'JSON';
-      $('importSummary').innerHTML=`Format erkannt: <b>${fmt}</b><br>Gefunden: <b>${pending.tasks.length}</b> Aufgabe(n), <b>${pending.tags.length}</b> Tag(s).`;
+      $('importSummary').innerHTML=`Format erkannt: <b>${fmt}</b><br>Gefunden: <b>${pending.tasks.length}</b> Aufgabe(n), <b>${pending.tags.length}</b> Tag(s)`+(pending.templates?.length?`, <b>${pending.templates.length}</b> Listen-Vorlage(n)`:'')+'.';
       $('importMode').value='merge'; updateImportHint();
       $('importOverlay').classList.add('show');
     }catch(err){ alert('Import fehlgeschlagen: '+err.message); }
@@ -1600,6 +1835,7 @@ function confirmImport(){
     if(!confirm('Wirklich alle aktuellen Daten ersetzen? Das kann nicht rückgängig gemacht werden.')) return;
     data.tasks=pendingImport.tasks;
     data.tags=pendingImport.tags.slice();
+    if(pendingImport.templates?.length) data.templates=pendingImport.templates;
     toast(`Import abgeschlossen: ${data.tasks.length} Aufgabe(n) geladen.`);
   }else{
     // Doppelte überspringen: gleiche ID oder inhaltlich gleiche Aufgabe (todo.txt hat keine IDs)
@@ -1612,6 +1848,7 @@ function confirmImport(){
       existingIds.add(nt.id); existingKeys.add(dupKey(nt)); data.tasks.push(nt); added++;
     });
     pendingImport.tags.forEach(tg=>{ if(!data.tags.includes(tg)) data.tags.push(tg); });
+    (pendingImport.templates||[]).forEach(x=>{ if(!data.templates.some(y=>y.id===x.id || y.name===x.name)) data.templates.push(x); });
     toast(`Import abgeschlossen: ${added} Aufgabe(n) hinzugefügt`+(skipped?`, ${skipped} doppelte übersprungen.`:'.'));
   }
   pendingImport=null; $('importOverlay').classList.remove('show');
@@ -1750,12 +1987,12 @@ function parseRemote(text){
   try{ p=JSON.parse(text); }catch(e){ throw new SyncError('Die Datei in der Nextcloud ist kein gültiges JSON und wird daher nicht überschrieben.'); }
   const d = p && p.data && Array.isArray(p.data.tasks) ? p.data : p;
   if(!d || !Array.isArray(d.tasks)) throw new SyncError('Die Datei in der Nextcloud hat ein unbekanntes Format und wird daher nicht überschrieben.');
-  return normalizeData({ tasks:d.tasks, projects:d.projects, tags:d.tags, tombstones:d.tombstones, listLog:d.listLog });
+  return normalizeData({ tasks:d.tasks, projects:d.projects, tags:d.tags, tombstones:d.tombstones, listLog:d.listLog, templates:d.templates });
 }
 /* Gleiches Format wie der JSON-Export → die Datei lässt sich auch direkt importieren */
 function syncPayload(){
   return { app:'Aufgabenverwaltung', version:2, exportedAt:new Date().toISOString(),
-    data:{ tasks:data.tasks, projects:data.projects, tags:data.tags, tombstones:data.tombstones, listLog:data.listLog } };
+    data:{ tasks:data.tasks, projects:data.projects, tags:data.tags, tombstones:data.tombstones, listLog:data.listLog, templates:data.templates } };
 }
 function applyMerged(merged){
   const before=canon(data);
@@ -1766,6 +2003,8 @@ function applyMerged(merged){
   activeFilters.tags.forEach(t=>{ if(!data.tags.includes(t)) activeFilters.tags.delete(t); });
   renderFilters(); render();
   if($('manageOverlay').classList.contains('show')) renderManage();
+  if($('tplOverlay').classList.contains('show')) renderTemplates();
+  if($('clOverlay').classList.contains('show')) renderChecklist();
 }
 
 /* Archiv: Erledigte Aufgaben, die älter als 12 Monate sind, wandern beim Sync in eine Jahresdatei
@@ -2488,6 +2727,19 @@ $('fab').onclick = ()=>openTask();
 $('cancelTask').onclick = closeTask;
 $('saveTask').onclick = saveTask;
 $('settingsBtn').onclick = openSettings;
+$('tplBtn').onclick = openTemplates;
+$('tplClose').onclick = closeTemplates;
+$('tplNew').onclick = ()=>openTplEdit(null);
+$('tplSave').onclick = saveTplEdit;
+$('tplEditCancel').onclick = closeTplEdit;
+$('tplDelete').onclick = deleteTpl;
+$('clClose').onclick = closeChecklist;
+$('clAddBtn').onclick = clAdd;
+$('clAddInput').onkeydown = e=>{ if(e.key==='Enter'){ e.preventDefault(); clAdd(); } };
+$('clToTpl').onclick = clToTemplate;
+$('clEdit').onclick = ()=>{ const id=clTaskId; closeChecklist(); openTask(id); };
+$('fClOpen').onclick = ()=>{ const id=$('taskId').value; closeTask(); openChecklist(id); };
+$('fTpl').onchange = e=>{ const x=data.templates.find(y=>y.id===e.target.value); if(x && !$('fName').value.trim()) $('fName').value=x.name; if(x) setQuickMode(false); };
 $('closeSettings').onclick = closeSettings;
 $('manageBtn').onclick = ()=>{ closeSettings(); openManage(); };
 $('closeManage').onclick = closeManage;
@@ -2564,10 +2816,10 @@ $('ppCancel').onclick = closePostpone;
 $('ppDate').onchange = e=>{ if(e.target.value){ closePostpone(); postpone(postponeIds, e.target.value); } };
 $('dueQuick').onclick = e=>{ const b=e.target.closest('button'); if(b) $('fDue').value = b.dataset.d==='' ? '' : addDays(+b.dataset.d); };
 
-[ 'taskOverlay','settingsOverlay','manageOverlay','importOverlay','backupOverlay','syncOverlay','postponeOverlay','qrOverlay' ].forEach(id=>{
+[ 'tplOverlay','tplEditOverlay','clOverlay','taskOverlay','settingsOverlay','manageOverlay','importOverlay','backupOverlay','syncOverlay','postponeOverlay','qrOverlay' ].forEach(id=>{
   $(id).addEventListener('click',e=>{ if(e.target.id===id){ $(id).classList.remove('show'); } });
 });
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeTask(); closeSettings(); closeManage(); $('importOverlay').classList.remove('show'); closeBackups(); closeSync(); closePostpone(); $('qrOverlay').classList.remove('show'); } });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeTask(); closeSettings(); closeManage(); $('importOverlay').classList.remove('show'); closeBackups(); closeSync(); closePostpone(); $('qrOverlay').classList.remove('show'); closeTplEdit(); closeChecklist(); closeTemplates(); } });
 
 function switchView(v){
   view=v; saveUi();
@@ -2590,7 +2842,7 @@ function applyTheme(){
 if(darkMq && darkMq.addEventListener) darkMq.addEventListener('change', ()=>{ if(themePref()==='auto') applyTheme(); });
 
 /* ---------- Android-App ---------- */
-const OVERLAYS = [ 'qrOverlay','postponeOverlay','importOverlay','syncOverlay','manageOverlay','backupOverlay','taskOverlay','settingsOverlay' ];
+const OVERLAYS = [ 'tplEditOverlay','clOverlay','tplOverlay','qrOverlay','postponeOverlay','importOverlay','syncOverlay','manageOverlay','backupOverlay','taskOverlay','settingsOverlay' ];
 if(IS_NATIVE){
   document.querySelectorAll('.native-only').forEach(el=>el.style.display='');
   $('autoDlLabel').textContent='Tägliches Backup automatisch unter Dokumente/Aufgaben';

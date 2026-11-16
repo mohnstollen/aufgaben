@@ -701,8 +701,10 @@ const LS_AUTODL = 'taskmanager_autodl';
 const LS_RETENTION = 'taskmanager_retention';
 const LS_DL_REGISTRY = 'taskmanager_dl_registry';
 const LS_SYNC = 'taskmanager_sync';
-/* Läuft die App als Android-App (Capacitor)? Dann stehen native Plugins bereit. */
+/* Läuft die App als Android-App (Capacitor) oder als Linux-Anwendung (linux/bridge.js bildet
+   dieselben Plugins nach)? Dann stehen native Plugins bereit. */
 const IS_NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+const IS_LINUX = IS_NATIVE && !!window.Capacitor.getPlatform && window.Capacitor.getPlatform()==='linux';
 const Native = IS_NATIVE ? window.Capacitor.Plugins : {};
 if(IS_NATIVE) document.documentElement.classList.add('native');
 const TOMBSTONE_DAYS = 180;
@@ -1071,7 +1073,7 @@ async function nativeShareText(text, filename){
     const { uri } = await Native.Filesystem.writeFile({ path:filename, data:text, directory:'CACHE', encoding:'utf8' });
     await Native.Share.share({ title:filename, dialogTitle:'Datei speichern oder teilen', files:[uri] });
   }catch(e){
-    if(!/cancel/i.test(e.message||'')) toast('Teilen fehlgeschlagen: '+(e.message||e));
+    if(!/cancel/i.test(e.message||'')) toast((IS_LINUX?'Speichern':'Teilen')+' fehlgeschlagen: '+(e.message||e));
   }
 }
 async function nativeDailyBackup(today){
@@ -2330,7 +2332,7 @@ async function startNcLogin(){
   renderSyncInfo('⟳ Verbinde mit Nextcloud …');
   let init;
   try{
-    const r=await ncRequest(server+'/index.php/login/v2', { method:'POST', headers: IS_NATIVE ? { 'User-Agent':'Aufgaben-App (Android)' } : {} });
+    const r=await ncRequest(server+'/index.php/login/v2', { method:'POST', headers: IS_NATIVE ? { 'User-Agent':`Aufgaben-App (${IS_LINUX?'Linux':'Android'})` } : {} });
     if(!r.ok) throw new Error(`Nextcloud antwortet mit Fehler ${r.status}`);
     init=JSON.parse(await r.text());
     if(!init?.poll?.token || !init?.login) throw new Error('Unerwartete Antwort – ist die Adresse richtig?');
@@ -2427,6 +2429,7 @@ async function startQrScan(){
 const UPDATE_REPO = 'mohnstollen/aufgaben';
 const LS_UPDATE = 'taskmanager_update';
 let appVersion = '';
+let updateExt = 'apk';            // Linux: 'deb' oder 'rpm', je nach installiertem Paket
 function getUpd(){ try{ return JSON.parse(localStorage.getItem(LS_UPDATE))||{}; }catch(e){ return {}; } }
 function setUpd(o){ try{ localStorage.setItem(LS_UPDATE, JSON.stringify(o)); }catch(e){} }
 function versionNewer(a,b){
@@ -2444,7 +2447,7 @@ function renderUpdate(){
 }
 function downloadUpdate(){ const a=availableUpdate(); if(a) location.href=a.url; }   // öffnet den Browser-Download
 async function checkUpdate(manual=false){
-  if(!IS_NATIVE || !appVersion) return;
+  if(!IS_NATIVE || !appVersion || !updateExt) return;
   const st=getUpd();
   if(!manual && Date.now()-(st.checkedAt||0) < 6*3600000) return;              // automatisch höchstens alle 6 h
   if(manual) $('updateBtn').textContent='Suche …';
@@ -2452,7 +2455,7 @@ async function checkUpdate(manual=false){
     const r=await fetch(`https://api.github.com/repos/${UPDATE_REPO}/releases/latest`, { headers:{ Accept:'application/vnd.github+json' }, cache:'no-store' });
     if(!r.ok) throw new Error('GitHub antwortet mit Fehler '+r.status);
     const rel=await r.json();
-    const apk=(rel.assets||[]).find(x=>/\.apk$/i.test(x.name));
+    const apk=(rel.assets||[]).find(x=>x.name.toLowerCase().endsWith('.'+updateExt));
     st.checkedAt=Date.now();
     st.available = apk && versionNewer(rel.tag_name, appVersion) ? { tag:rel.tag_name, url:apk.browser_download_url } : null;
     setUpd(st); renderUpdate();
@@ -2599,7 +2602,17 @@ if(IS_NATIVE){
   Native.App.addListener('appStateChange', ({ isActive })=>{ if(isActive){ importQuickInbox(); scheduleSync(300); scheduleAutoDownload(); checkUpdate(); pollNcLogin(); } });
   importQuickInbox();
   $('updateBtn').onclick = ()=>{ availableUpdate() ? downloadUpdate() : checkUpdate(true); };
-  Native.App.getInfo().then(info=>{ appVersion=info.version||''; renderUpdate(); setTimeout(()=>checkUpdate(), 3000); }).catch(()=>{});
+  Native.App.getInfo().then(info=>{
+    appVersion=info.version||'';
+    // Linux: ohne Paket (Start aus dem Quellverzeichnis) gibt es nichts zu aktualisieren
+    if(IS_LINUX){ updateExt=info.updateExt||''; if(!updateExt) $('updateBtn').style.display='none'; }
+    renderUpdate(); setTimeout(()=>checkUpdate(), 3000);
+  }).catch(()=>{});
+  // Linux: „aufgaben --neu“ bzw. die Aktion „Neue Aufgabe“ im Startmenü bei laufender App
+  if(IS_LINUX) Native.App.addListener('quickAdd', ()=>{
+    OVERLAYS.forEach(id=>$(id).classList.remove('show'));
+    switchView('active'); $('quickAdd').focus();
+  });
 }
 
 /* ---------- Zurück-Taste in Browser/PWA ----------

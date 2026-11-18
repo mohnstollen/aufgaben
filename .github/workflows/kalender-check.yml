@@ -1,0 +1,22 @@
+name: Kalender-Check Bahnland Bayern
+
+on:
+  schedule:
+    - cron: "17 5-20 * * *"   # stündlich 6–21 Uhr (MEZ)
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Seite prüfen
+        run: |
+          code=$(curl -sSL -A "Mozilla/5.0" -o page.html -w "%{http_code}" https://bahnland-bayern.de/de/infomaterial)
+          echo "HTTP $code"
+          if [ "$code" != "200" ]; then echo "Seite nicht erreichbar – überspringe."; exit 0; fi
+          if grep -q "Heute sind keine Vorbestellungen mehr möglich" page.html; then
+            echo "Noch keine Bestellung möglich."
+          else
+            echo "::error::Text verschwunden – jetzt Kalender bestellen: https://bahnland-bayern.de/de/infomaterial"
+            exit 1
+          fi

@@ -4,6 +4,8 @@ import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.SharedPreferences;
+import java.util.Calendar;
+import java.util.List;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -36,6 +38,11 @@ final class WidgetData {
     static JSONArray items(Context context) {
         JSONArray items = read(context).optJSONArray("items");
         return items != null ? items : new JSONArray();
+    }
+
+    /** Fürs Widget ausgewählte und beschriftete Einträge, bezogen auf das heutige Datum */
+    static List<JSONObject> visible(Context context) {
+        return WidgetItems.visible(items(context), WidgetItems.today(Calendar.getInstance()));
     }
 
     static int openCount(Context context) {

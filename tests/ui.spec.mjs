@@ -353,20 +353,21 @@ test('Kompakte Kopfzeile: erste Aufgabe beginnt im oberen Drittel', async ({ bro
 test.describe('Android-Widget', () => {
   const widget = page => page.evaluate(() => window.__native.widget);
 
-  test('zeigt Schnell, Überfällig und Heute – in dieser Reihenfolge, ohne spätere Aufgaben', async ({ browser }) => {
+  test('bekommt Schnellaufgaben und Fälliges bis in 7 Tagen (Einordnung macht das Widget selbst)', async ({ browser }) => {
     const { page } = await openApp(browser, { now: NOW, native: {}, data: { projects: [], tags: [], tasks: [
-      ...DATA.tasks, task('q1', 'Milch kaufen', { quick: true, created: 5 })] } });
+      ...DATA.tasks, task('q1', 'Milch kaufen', { quick: true, created: 5 }), task('f1', 'In drei Wochen', { due: '2026-11-18' })] } });
     await expect.poll(() => widget(page)).toBeTruthy();
     const w = await widget(page);
-    expect(w.open).toBe(6);
-    expect(w.items.map(i => [i.name, i.kind, i.label])).toEqual([
-      ['Milch kaufen', 'quick', '⚡ Schnell'],
-      ['Rechnung bezahlen', 'overdue', 'Überfällig · seit 2 Tagen · 🔴 Hoch'],
-      ['Zahnarzt anrufen', 'today', 'Heute · 🔴 Hoch'],
-      ['Bier austrinken', 'today', 'Heute']]);
+    expect(w.open).toBe(7);
+    expect(w.items.map(i => [i.name, i.quick, i.due, i.high])).toEqual([
+      ['Milch kaufen', true, null, false],
+      ['Rechnung bezahlen', false, '2026-10-26', true],
+      ['Bier austrinken', false, '2026-10-28', false],
+      ['Zahnarzt anrufen', false, '2026-10-28', true],
+      ['Rasen mähen', false, '2026-11-01', false]]);                // in 4 Tagen: wird dann im Widget zu „Heute“
     // Änderung in der App → Widget wird aktualisiert
     await page.click('[aria-label="Als erledigt markieren: Bier austrinken"]');
-    await expect.poll(async () => (await widget(page)).items.length).toBe(3);
+    await expect.poll(async () => (await widget(page)).items.length).toBe(4);
   });
 
   test('im Widget abgehakte Aufgaben werden übernommen (inkl. Folgeaufgabe bei Wiederholung)', async ({ browser }) => {

@@ -128,12 +128,15 @@
   .task.is-quick .check{margin-top:0}
   .task.is-quick .tname{font-weight:500}
   .quick-toggle{display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--surface2); border-radius:10px; margin-bottom:14px; font-size:14px; cursor:pointer}
-  .quick-toggle input{width:18px; height:18px; accent-color:var(--accent)}
+  .field .quick-toggle{display:flex; font-size:14px; color:var(--text)}
+  .quick-toggle input, .field .quick-toggle input{width:18px; height:18px; padding:0; flex:none; accent-color:var(--accent)}
   .group-h .gh-btn{margin-left:auto; text-transform:none; letter-spacing:0; font-size:12px; font-weight:600; font-family:inherit;
     background:none; border:1px solid currentColor; color:inherit; border-radius:14px; padding:4px 10px; cursor:pointer}
   button.badge{border:none; font-family:inherit; cursor:pointer}
   button.badge.due::after{content:"▾"; opacity:.6; font-size:10px}
   .badge.rec{background:var(--c-blue-bg); color:var(--c-blue)}
+  .badge.remind{background:var(--c-amber-bg); color:var(--c-amber)}
+  .badge.remind.past{opacity:.6}
   .badge.cl{background:var(--c-violet-bg, var(--surface2)); color:var(--c-violet)}
   .badge.cl.full{background:var(--c-green-bg, var(--surface2)); color:var(--c-green)}
   .tpl-item{display:flex; align-items:center; gap:8px; padding:10px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; margin-bottom:8px}
@@ -463,6 +466,11 @@
       <div class="field">
         <label for="fRec">Wiederholen</label>
         <select id="fRec"></select>
+      </div>
+      <div class="field">
+        <label class="quick-toggle" style="margin-bottom:8px"><input type="checkbox" id="fRemindOn"> 🔔 Erinnerung</label>
+        <input type="datetime-local" id="fRemind" aria-label="Erinnerung: Datum und Uhrzeit" hidden>
+        <div class="hint" id="remindHint" hidden></div>
       </div>
       <div class="field">
         <label>Tags</label>
@@ -1229,7 +1237,7 @@ function dueGroup(t){
 const GROUPS = [['overdue','Überfällig'],['today','Heute'],['tomorrow','Morgen'],['week','Nächste 7 Tage'],['later','Später'],['none','Ohne Datum']];
 
 function render(){
-  pushWidget();
+  pushWidget(); scheduleReminderSync();
   $('cntActive').textContent = data.tasks.filter(t=>!t.done).length;
   $('cntArchive').textContent = data.tasks.filter(t=>t.done).length;
   let items = data.tasks.filter(t => view==='archive' ? t.done : !t.done);
@@ -1294,7 +1302,8 @@ function taskCard(t){
   // offene Aufgaben: Datum antippen = verschieben
   const dueBadge = !t.due ? '' : t.done ? `<span class="badge due" title="${fmtDate(t.due)}">📅 ${relDue(t.due)}</span>`
     : `<button type="button" class="badge due${overdue?' overdue':''}" data-act="postpone" title="${fmtDate(t.due)} – verschieben">📅 ${relDue(t.due)}</button>`;
-  const recBadge = t.rec ? `<span class="badge rec" title="Wiederholt sich ${describeRec(t.rec)}">🔁 ${describeRec(t.rec)}</span>` : '';
+  const recBadge = (t.rec ? `<span class="badge rec" title="Wiederholt sich ${describeRec(t.rec)}">🔁 ${describeRec(t.rec)}</span>` : '')
+    + (t.remind && !t.done ? `<span class="badge remind${new Date(t.remind)<new Date()?' past':''}" title="Erinnerung">🔔 ${fmtRemind(t.remind)}</span>` : '');
   const tagBadges = (t.tags||[]).map(tg=>`<span class="badge tag">#${escapeHtml(tg)}</span>`).join('');
   const note = t.note ? `<div class="tnote">${escapeHtml(t.note)}</div>` : '';
   const cl = clProgress(t);
@@ -1381,6 +1390,11 @@ function spawnNext(t){
   if(data.tasks.some(x=>x.id===id2)) return null;
   const spawned={ ...t, id:id2, due, done:false, doneAt:null, created:Date.now() };
   delete spawned.updatedAt;
+  // Erinnerung behält ihren Abstand zum Fälligkeitsdatum (z. B. „am Vortag 18 Uhr“)
+  if(t.remind && t.due){
+    const r=new Date(t.remind); r.setDate(r.getDate()+Math.round((new Date(due+'T00:00:00')-new Date(t.due+'T00:00:00'))/86400000));
+    spawned.remind=localDateTime(r);
+  }else delete spawned.remind;
   if(t.checklist) spawned.checklist=t.checklist.map(i=>({ ...i, id:uid(), done:false, ts:Date.now() }));
   data.tasks.push(spawned);
   return spawned;
@@ -1398,6 +1412,101 @@ function toggleDone(id){
     if(spawned) data.tasks=data.tasks.filter(y=>y.id!==spawned.id);
     save(); render();
   }});
+}
+
+/* ---------- Erinnerungen ----------
+   remind = lokale Zeit „JJJJ-MM-TTTHH:MM“. Android: geplante System-Benachrichtigung (auch bei geschlossener App,
+   mit „Erledigt“ / „1 Std. später“). Browser: nur solange die App geöffnet ist. */
+const LS_REMINDERS='taskmanager_reminders';     // geplante Benachrichtigungen dieses Geräts: { taskId: { nid, at, name } }
+const localDateTime = d => `${toDateStr(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+function fmtRemind(v){ const d=new Date(v); return `${relDue(toDateStr(d))} ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function reminderId(taskId){ let h=0; for(const c of String(taskId)) h=(h*31+c.charCodeAt(0))|0; return Math.abs(h)%2000000000+1; }
+function setRemindField(v){
+  $('fRemindOn').checked=!!v; $('fRemind').value=v; $('fRemind').hidden=!v; $('remindHint').hidden=true;
+}
+/* Vorschlag: Fälligkeitstag 9:00, sonst (oder wenn vorbei) die nächste volle Stunde */
+function defaultRemind(){
+  const due=$('fDue').value;
+  if(due){ const d=new Date(due+'T09:00'); if(d>new Date()) return localDateTime(d); }
+  const d=new Date(); d.setMinutes(0,0,0); d.setHours(d.getHours()+1);
+  return localDateTime(d);
+}
+async function onRemindToggle(on){
+  $('fRemind').hidden=!on;
+  if(on && !$('fRemind').value) $('fRemind').value=defaultRemind();
+  if(on) $('fRemind').focus();
+  const hint=$('remindHint'); hint.hidden=true;
+  if(!on) return;
+  if(IS_NATIVE && Native.LocalNotifications){
+    try{
+      const p=await Native.LocalNotifications.requestPermissions();
+      if(p.display!=='granted'){ hint.hidden=false; hint.textContent='Benachrichtigungen sind für die App ausgeschaltet – bitte in den Android-Einstellungen der App erlauben.'; return; }
+      const ex=await Native.LocalNotifications.checkExactNotificationSetting?.();
+      if(ex && ex.exact_alarm && ex.exact_alarm!=='granted'){
+        hint.hidden=false;
+        hint.innerHTML='Ohne die Berechtigung „Wecker &amp; Erinnerungen“ kann Android die Erinnerung einige Minuten verzögern. '
+          +'<button type="button" class="btn ghost" id="exactBtn" style="padding:4px 10px">Pünktlich erlauben</button>';
+        $('exactBtn').onclick=()=>Native.LocalNotifications.changeExactNotificationSetting().catch(()=>{});
+      }
+    }catch(_){}
+  }else if('Notification' in window){
+    if(Notification.permission==='default') await Notification.requestPermission().catch(()=>{});
+    hint.hidden=false;
+    hint.textContent = Notification.permission==='granted'
+      ? 'Im Browser erinnert die App nur, solange sie geöffnet ist. Zuverlässig klappt es mit der Android-App.'
+      : 'Der Browser blockiert Benachrichtigungen – bitte für diese Seite erlauben.';
+  }
+}
+function wantedReminders(){
+  const out={}, now=Date.now();
+  data.tasks.forEach(t=>{
+    if(t.done || t.quick || !t.remind) return;
+    const at=new Date(t.remind).getTime();
+    if(at>now) out[t.id]={ nid:reminderId(t.id), at, name:t.name, body: t.due ? 'Fällig '+relDue(t.due) : 'Erinnerung' };
+  });
+  return out;
+}
+let reminderTimer=null, webReminderTimers=[];
+function scheduleReminderSync(){ clearTimeout(reminderTimer); reminderTimer=setTimeout(syncReminders, 300); }
+async function syncReminders(){
+  const want=wantedReminders();
+  if(IS_NATIVE){
+    if(!Native.LocalNotifications) return;
+    let have={}; try{ have=JSON.parse(localStorage.getItem(LS_REMINDERS))||{}; }catch(_){}
+    const now=Date.now(), stillOpen=id=>data.tasks.some(t=>t.id===id && !t.done);
+    const same=id=>want[id] && have[id] && want[id].at===have[id].at && want[id].name===have[id].name;
+    // Abbrechen: geändert/gelöscht/erledigt. Bereits ausgelöste Erinnerungen offener Aufgaben bleiben in der Leiste.
+    const cancel=Object.keys(have).filter(id=>!same(id) && (have[id].at>now || !stillOpen(id))).map(id=>({ id:have[id].nid }));
+    const add=Object.keys(want).filter(id=>!same(id));
+    try{
+      if(cancel.length) await Native.LocalNotifications.cancel({ notifications:cancel });
+      if(add.length) await Native.LocalNotifications.schedule({ notifications:add.map(id=>({
+        id:want[id].nid, title:want[id].name, body:want[id].body,
+        schedule:{ at:new Date(want[id].at), allowWhileIdle:true },
+        actionTypeId:'aufgabe', extra:{ taskId:id }, smallIcon:'ic_stat_reminder', iconColor:'#4F8CFF' })) });
+      localStorage.setItem(LS_REMINDERS, JSON.stringify(Object.fromEntries(Object.entries(want).map(([id,w])=>[id,{ nid:w.nid, at:w.at, name:w.name }]))));
+    }catch(e){ console.warn('Erinnerungen konnten nicht geplant werden:', e); }
+    return;
+  }
+  // Browser: nur solange geöffnet – Erinnerungen der nächsten 24 Stunden per Timer
+  webReminderTimers.forEach(clearTimeout); webReminderTimers=[];
+  if(!('Notification' in window) || Notification.permission!=='granted') return;
+  Object.entries(want).forEach(([id,w])=>{
+    const ms=w.at-Date.now(); if(ms>86400000) return;
+    webReminderTimers.push(setTimeout(async ()=>{
+      const t=data.tasks.find(x=>x.id===id); if(!t || t.done || t.remind && new Date(t.remind).getTime()!==w.at) return;
+      try{ const reg=await navigator.serviceWorker?.getRegistration(); if(reg) reg.showNotification(w.name, { body:w.body, tag:id }); else new Notification(w.name, { body:w.body, tag:id }); }
+      catch(_){ new Notification(w.name, { body:w.body }); }
+    }, ms));
+  });
+}
+function onReminderAction(a){
+  const id=a?.notification?.extra?.taskId, t=data.tasks.find(x=>x.id===id); if(!t) return;
+  if(a.actionId==='done'){
+    if(!t.done){ setDone(t, true); save(); render(); toast(`„${shortName(t.name)}" erledigt ✓`); }
+  }else if(a.actionId==='snooze'){
+    t.remind=localDateTime(new Date(Date.now()+3600000)); save(); render(); toast('Erinnerung in 1 Stunde');
+  }else if(!t.done) openTask(id);
 }
 
 /* ---------- Schnell anlegen (Eingabezeile, später auch Android-Schnelleingabe) ----------
@@ -1447,18 +1556,17 @@ async function importQuickInbox(){
   if(msgs.length) toast(msgs.join(' · '));
 }
 
-/* Android-Widget: Schnellaufgaben, überfällige und heutige Aufgaben – nur senden, wenn sich etwas geändert hat */
+/* Android-Widget: Schnellaufgaben und Aufgaben mit Fälligkeit bis in 7 Tagen. Was davon heute bzw. überfällig ist,
+   rechnet das Widget selbst nach dem aktuellen Datum aus – so stimmt es auch, wenn die App tagelang nicht geöffnet wird. */
 let lastWidgetData='';
 function widgetPayload(){
-  const open=data.tasks.filter(t=>!t.done);
-  const kindOf=t=> t.quick ? 'quick' : !t.due ? null : dayDiff(t.due)<0 ? 'overdue' : dayDiff(t.due)===0 ? 'today' : null;
-  const order={ quick:0, overdue:1, today:2 };
-  const items=open.map(t=>({ t, k:kindOf(t) })).filter(x=>x.k)
-    .sort((a,b)=>order[a.k]-order[b.k] || (a.k==='quick' ? a.t.created-b.t.created : cmpDue(a.t,b.t)||cmpPrio(a.t,b.t)))
-    .slice(0, 60)
-    .map(({ t, k })=>({ id:t.id, name:t.name, kind:k,
-      label: (k==='quick' ? '⚡ Schnell' : (k==='overdue' ? 'Überfällig · '+relDue(t.due) : 'Heute') + (t.prio==='Hoch' ? ' · 🔴 Hoch' : ''))
-        + (clProgress(t) ? ` · ☑ ${clProgress(t).done}/${clProgress(t).total}` : '') }));
+  const open=data.tasks.filter(t=>!t.done), horizon=addDays(7);
+  const items=open.filter(t=>t.quick || (t.due && t.due<=horizon))
+    .sort((a,b)=>(b.quick?1:0)-(a.quick?1:0) || cmpDue(a,b) || a.created-b.created)
+    .slice(0, 100)
+    .map(t=>{ const cl=clProgress(t);
+      return { id:t.id, name:t.name, quick:!!t.quick, due:t.quick ? null : t.due, high:t.prio==='Hoch', created:t.created,
+        ...(cl ? { cl:`${cl.done}/${cl.total}` } : {}) }; });
   return JSON.stringify({ open:open.length, items });
 }
 function pushWidget(){
@@ -1586,7 +1694,7 @@ function openTask(id, opts={}){
     $('quickBox').style.display='none'; $('toggleDetails').style.display='none'; $('detailsBox').classList.add('show');
     $('taskId').value=t.id; $('fName').value=t.name; $('fDue').value=t.due||''; $('fPrio').value=t.prio;
     $('fTags').value=(t.tags||[]).join(', '); $('fNote').value=t.note||'';
-    refreshRecSelect(t.rec); setQuickMode(!!t.quick);
+    refreshRecSelect(t.rec); setQuickMode(!!t.quick); setRemindField(t.remind||'');
     $('deleteTaskBtn').style.display='';
     $('fTplRow').style.display='none';
     $('fClRow').style.display = t.checklist ? '' : 'none';
@@ -1595,7 +1703,7 @@ function openTask(id, opts={}){
     $('taskModalTitle').textContent='Neue Aufgabe';
     $('quickBox').style.display='block'; $('toggleDetails').style.display='block'; $('detailsBox').classList.remove('show');
     $('taskId').value=''; $('fName').value=''; $('fDue').value=''; $('fPrio').value='Mittel';
-    $('fTags').value=''; $('fNote').value=''; refreshRecSelect(''); setQuickMode(false);
+    $('fTags').value=''; $('fNote').value=''; refreshRecSelect(''); setQuickMode(false); setRemindField('');
     $('deleteTaskBtn').style.display='none';
     $('fClRow').style.display='none';
     refreshTplSelect(opts.tpl||'');
@@ -1625,9 +1733,10 @@ function saveTask(){
   if(note) task.note=note; else delete task.note;
   const rec=parseRec($('fRec').value)?.value;
   if(rec) task.rec=rec; else delete task.rec;
+  if($('fRemindOn').checked && $('fRemind').value) task.remind=$('fRemind').value; else delete task.remind;
   if($('fIsQuick').checked){                                   // Schnellaufgabe: alles außer dem Text entfällt
     Object.assign(task, { due:null, prio:'Mittel', tags:[], quick:true });
-    delete task.note; delete task.rec;
+    delete task.note; delete task.rec; delete task.remind;
   }else delete task.quick;
   if(task.checklist) delete task.quick;
   save(); closeTask(); renderFilters(); render();
@@ -2783,6 +2892,7 @@ $('sort').onchange = e=>{ sortBy=e.target.value; saveUi(); render(); };
 $('quickAdd').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); submitQuickAdd(); } });
 $('quickAddBtn').onclick = ()=>{ submitQuickAdd(); $('quickAdd').focus(); };
 $('fIsQuick').onchange = e=>setQuickMode(e.target.checked);
+$('fRemindOn').onchange = e=>onRemindToggle(e.target.checked);
 $('deleteTaskBtn').onclick = ()=>{ const id=$('taskId').value; closeTask(); if(id) delTask(id); };
 $('themeSel').onchange = e=>{ try{ localStorage.setItem(LS_THEME, e.target.value); }catch(_){} applyTheme(); };
 $('tabActive').onclick = ()=>switchView('active');
@@ -2853,6 +2963,11 @@ if(IS_NATIVE){
   });
   Native.App.addListener('appStateChange', ({ isActive })=>{ if(isActive){ importQuickInbox(); scheduleSync(300); scheduleAutoDownload(); checkUpdate(); pollNcLogin(); } });
   importQuickInbox();
+  if(Native.LocalNotifications){
+    Native.LocalNotifications.registerActionTypes({ types:[{ id:'aufgabe', actions:[
+      { id:'done', title:'Erledigt' }, { id:'snooze', title:'1 Std. später' }] }] }).catch(()=>{});
+    Native.LocalNotifications.addListener('localNotificationActionPerformed', onReminderAction);
+  }
   $('updateBtn').onclick = ()=>{ availableUpdate() ? downloadUpdate() : checkUpdate(true); };
   Native.App.getInfo().then(info=>{
     appVersion=info.version||'';

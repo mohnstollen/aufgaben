@@ -1,6 +1,6 @@
 # 📋 Aufgabenverwaltung (PWA)
 
-Eine installierbare, offline-fähige Aufgaben-App. Die Daten liegen **lokal** auf dem
+Eine installierbare, offline-fähige Aufgaben-App – als PWA, Android-App und Linux-Anwendung. Die Daten liegen **lokal** auf dem
 Gerät (Local Storage) – kein Konto, kein Tracking. Optional lassen sie sich über die
 **eigene Nextcloud** zwischen mehreren Geräten synchronisieren.
 
@@ -17,6 +17,10 @@ Gerät (Local Storage) – kein Konto, kein Tracking. Optional lassen sie sich �
 - Antippen öffnet eine Aufgabe zum Bearbeiten
 - Auf dem Handy **wischen**: nach rechts = erledigt, nach links = löschen
 - Löschen und Abhaken lassen sich per **„Rückgängig“** zurücknehmen
+- **☑ Listen-Vorlagen** (z. B. Packliste „Dienstreise“): „Starten“ legt eine Aufgabe mit eigener Checkliste an,
+  die Vorlage bleibt unverändert; Einträge hinzufügen/entfernen, „In Vorlage übernehmen“, Fortschritt auf der Karte
+  und im Android-Widget. Schnelleingabe: `!Dienstreise Hamburg morgen`. Vorlagen und Häkchen werden mit synchronisiert
+  (paralleles Abhaken auf zwei Geräten wird Eintrag für Eintrag zusammengeführt)
 - **Wiederkehrende Aufgaben** (täglich, wöchentlich, monatlich …): beim Abhaken entsteht die nächste
 - **🔔 Erinnerungen**: im Dialog „Erinnerung“ anhaken und Datum/Uhrzeit wählen. In der Android-App
   kommt die Benachrichtigung zuverlässig (auch bei geschlossener App und nach Neustart), mit den
@@ -28,7 +32,7 @@ Gerät (Local Storage) – kein Konto, kein Tracking. Optional lassen sie sich �
 - **Helles und dunkles Design** (automatisch nach Systemeinstellung oder fest wählbar)
 - Zurück-Taste schließt offene Dialoge
 - **Export/Import** als JSON-Backup oder todo.txt
-- **Nextcloud-Sync** per WebDAV (optional)
+- **Nextcloud-Sync** per WebDAV (optional), auf Wunsch auch mit **Nextcloud Tasks**
 - **PWA**: installierbar, offline nutzbar
 
 ---
@@ -172,6 +176,57 @@ Nach Änderungen an `index.html` immer erst `npm run sync` ausführen.
 > `mohnstollen.github.io`. Hier unter `/aufgaben/` findet Android sie nicht, deshalb zeigt
 > die TWA eine Adressleiste.
 
+## 🐧 Linux-Anwendung (Debian, Ubuntu, Linux Mint, Fedora)
+Für den Desktop gibt es die App als eigenes Programm mit Startmenü-Eintrag – ohne Browser, ohne
+Electron. Ein kleines GTK-Fenster (Python, WebKitGTK) zeigt dieselbe `index.html`; das Paket ist
+nur wenige hundert kB groß und nutzt die Bibliotheken der Distribution. Läuft unter XFCE, Cinnamon, MATE,
+GNOME und KDE (X11 und Wayland).
+
+- **Nextcloud-Sync ohne CORS-Einrichtung** – wie in der Android-App: Sync-Datei (WebDAV) und
+  **Nextcloud Tasks** (CalDAV) laufen nativ, „WebAppPassword" wird nicht gebraucht.
+- **🔐 Mit Nextcloud anmelden** funktioniert: Die Anmeldeseite öffnet sich im Standardbrowser,
+  danach geht es im Programm automatisch weiter.
+- **Backups als echte Dateien** unter `Dokumente/Aufgaben`; Exporte über einen Speichern-Dialog.
+- **Neue Aufgabe ohne Umweg:** Rechtsklick auf das Symbol → „Neue Aufgabe“, oder im Terminal bzw.
+  per Tastenkürzel `aufgaben --neu Milch kaufen morgen #einkauf` (legt die Aufgabe direkt an, auch
+  wenn das Programm schon läuft). `aufgaben --neu` ohne Text setzt den Cursor in die Eingabezeile.
+- Synchronisiert beim Start, nach jeder Änderung, alle 5 Minuten und wenn das Fenster wieder
+  in den Vordergrund kommt. **Strg+Q** beendet.
+
+### Installieren
+Die Pakete hängen an jedem [Release](https://github.com/mohnstollen/aufgaben/releases/latest):
+
+**Debian (ab 12), Ubuntu (ab 22.04), Linux Mint (ab 21):**
+```bash
+wget https://github.com/mohnstollen/aufgaben/releases/latest/download/aufgaben.deb
+sudo apt install ./aufgaben.deb
+```
+Alternativ die heruntergeladene Datei doppelklicken (GDebi bzw. Software-Installation).
+
+**Fedora:**
+```bash
+sudo dnf install https://github.com/mohnstollen/aufgaben/releases/latest/download/aufgaben.rpm
+```
+
+Benötigte Systempakete (`python3-gi`, `gir1.2-webkit2-4.1` bzw. `python3-gobject`, `webkit2gtk4.1`)
+werden automatisch mitinstalliert. Entfernen: `sudo apt remove aufgaben` bzw. `sudo dnf remove aufgaben`.
+
+**Updates:** Unter ⚙️ Einstellungen → App steht die Version mit „Nach Updates suchen“; das Programm
+meldet neue Versionen auch selbst. „Laden“ holt das Paket über den Browser, installiert wird es wie oben.
+
+Die Daten liegen unter `~/.local/share/aufgaben` und sind von Browser- und Android-Version getrennt –
+zum Abgleich den Nextcloud-Sync einrichten.
+
+### Selbst bauen / aus dem Quellverzeichnis starten
+```bash
+sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1   # Fedora: python3-gobject gtk3 webkit2gtk4.1
+python3 linux/aufgaben.py        # direkt starten
+bash linux/build.sh              # → dist/aufgaben_<version>_all.deb und (mit rpmbuild) .rpm
+node linux/test.mjs              # Sync-Test am laufenden Programm (braucht xvfb)
+```
+Bleibt das Fenster mit einem exotischen Grafiktreiber leer oder ruckelt es, hilft der Start mit
+`AUFGABEN_GPU=1 aufgaben` (schaltet die Hardware-Beschleunigung ein; Standard ist Software-Darstellung).
+
 ## 🧪 Automatische Tests
 Der Ordner `tests/` enthält Playwright-Tests für die wichtigsten Abläufe:
 - **Sync** gegen einen Nachbau der Nextcloud-WebDAV-Schnittstelle (`tests/helpers/mock-webdav.mjs`):
@@ -180,7 +235,11 @@ Der Ordner `tests/` enthält Playwright-Tests für die wichtigsten Abläufe:
   Backups, Teilen, Update-Prüfung
 - **Anmeldung**: Login Flow v2, Anmelde-QR-Code – der Scan läuft Ende-zu-Ende über eine
   simulierte Kamera, die ein Bild mit QR-Code liefert
+- **Nextcloud Tasks** gegen einen CalDAV-Nachbau: Hochladen aller Felder, Änderungen in beide Richtungen,
+  Konflikte, Löschen, Wiederholungen, zwei Geräte mit Sync-Datei, Einrichtung im Dialog
 - **Bedienung**: Gruppierung, Schnelleingabe, Bearbeiten, Rückgängig, Wischen, Filter, Design
+- **Linux-Anwendung** (`linux/test.mjs`, läuft im Linux-Job): das installierte `.deb` gleicht gegen
+  denselben Nachbau Sync-Datei und Nextcloud Tasks ab, zwei Rechner, Neustart, `aufgaben --neu`
 
 In GitHub Actions laufen sie bei jedem Pull Request und vor jedem APK-Build und Pages-Deploy
 (`.github/workflows/tests.yml`). **Schlägt ein Test fehl, gibt es weder ein Release noch ein
@@ -196,7 +255,7 @@ Nach Änderungen einfach neu pushen:
 ```bash
 git add -A && git commit -m "Update" && git push
 ```
-Die Service-Worker-Cache-Version steht in `sw.js` (`const CACHE = 'aufgaben-v14'`).
+Die Service-Worker-Cache-Version steht in `sw.js` (`const CACHE = 'aufgaben-v…'`).
 Bei größeren Änderungen die Zahl erhöhen (z. B. `aufgaben-v2`), damit Clients frisch laden.
 
 ## ⌨️ Schnelleingabe
@@ -265,6 +324,34 @@ Benutzerkonto nehmen, nicht das Admin-Konto.
 - Die Nextcloud muss per **https://** erreichbar sein: Eine HTTPS-Seite darf keine
   unverschlüsselten Adressen aufrufen.
 
+## ✅ Abgleich mit Nextcloud Tasks
+Zusätzlich oder statt der Sync-Datei kann die App die Aufgaben mit einer Aufgabenliste der Nextcloud
+abgleichen (CalDAV). Sie erscheinen dann in der Nextcloud-App **Tasks** und in jeder anderen CalDAV-App
+(z. B. Tasks.org, Thunderbird) und lassen sich dort ansehen, bearbeiten, abhaken, anlegen und löschen.
+
+**Einschalten:** ⚙️ Einstellungen → Nextcloud-Sync → „Mit Nextcloud Tasks abgleichen“. Ohne Auswahl nimmt die
+App die Liste „Aufgaben“ und legt sie bei Bedarf an; über „Listen laden“ lässt sich eine vorhandene Liste wählen.
+Die Sync-Datei kann daneben eingeschaltet bleiben (empfohlen bei mehreren Geräten mit dieser App) oder
+abgeschaltet werden.
+
+| In der App | In Nextcloud Tasks |
+|---|---|
+| Name, Notiz | Titel, Beschreibung |
+| Fälligkeitsdatum | Fällig (ganztägig; eine dort gesetzte Uhrzeit bleibt erhalten) |
+| Priorität Hoch / Mittel / Niedrig | Priorität 1–4 / keine oder 5 / 6–9 |
+| Tags | Kategorien |
+| Erledigt | Abgeschlossen |
+| Schnellaufgabe, Wiederholung | eigene Felder `X-AUFGABEN-QUICK`, `X-AUFGABEN-REC` (in Tasks nicht sichtbar) |
+
+- Beim Zurückschreiben ändert die App nur die Felder, die sich unterscheiden. Erinnerungen, Unteraufgaben,
+  Startdatum und alles andere, was die Nextcloud an einer Aufgabe speichert, bleiben erhalten.
+- Wurde eine Aufgabe auf beiden Seiten geändert, gewinnt die jüngere Änderung.
+- Wird eine wiederkehrende Aufgabe in der Nextcloud abgehakt, legt die App beim nächsten Abgleich die
+  nächste an. Die Wiederholung selbst kennt Nextcloud Tasks nicht.
+- Erledigtes, das älter als 30 Tage ist, wird nicht mehr neu hochgeladen.
+- **Android-App:** funktioniert ohne weitere Einrichtung. **Im Browser** nur, wenn die Nextcloud
+  CalDAV-Zugriffe von der Seite erlaubt (CORS) – ob „WebAppPassword“ das abdeckt, hängt von dessen Version ab.
+
 ## 💾 Speicher
 Die Aufgabenliste liegt im lokalen Speicher des Browsers bzw. der App (Platz für weit über
 10.000 Aufgaben). Die täglichen Snapshots liegen in IndexedDB, wo praktisch unbegrenzt Platz ist.
@@ -288,6 +375,7 @@ aufgaben/
 ├─ scripts/build-web.mjs    # kopiert die Web-App nach www/
 ├─ tests/                   # Playwright-Tests (npm test)
 ├─ android/                 # natives Android-Projekt (inkl. WebDAV-Plugin)
+├─ linux/                   # Linux-Anwendung: aufgaben.py (GTK/WebKitGTK), bridge.js, build.sh (.deb/.rpm)
 ├─ .gitignore
 ├─ README.md
 ├─ icons/
@@ -299,7 +387,7 @@ aufgaben/
 └─ .github/workflows/
    ├─ tests.yml             # Tests (vor Deploy und APK-Build)
    ├─ deploy.yml            # Auto-Deploy auf GitHub Pages
-   └─ android.yml           # baut die APK
+   └─ android.yml           # baut die APK und die Linux-Pakete
 ```
 
 > **Warum `.nojekyll`?** GitHub Pages verarbeitet Seiten sonst mit Jekyll und ignoriert

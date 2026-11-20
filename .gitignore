@@ -20,3 +20,7 @@ www/
 # Playwright-Tests
 test-results/
 playwright-report/
+
+# Linux-Pakete
+build/
+dist/

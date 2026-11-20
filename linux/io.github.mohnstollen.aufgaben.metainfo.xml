@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.mohnstollen.aufgaben</id>
+  <name>Aufgaben</name>
+  <summary>Aufgaben verwalten und mit Nextcloud synchronisieren</summary>
+  <summary xml:lang="en">Manage tasks and sync them with Nextcloud</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-2.0-only</project_license>
+  <description>
+    <p>Aufgabenverwaltung mit Schnelleingabe, Tags, Prioritäten und wiederkehrenden Aufgaben.
+    Die Daten liegen lokal; auf Wunsch werden sie mit der eigenen Nextcloud abgeglichen –
+    als Sync-Datei (WebDAV) und mit Nextcloud Tasks (CalDAV).</p>
+  </description>
+  <launchable type="desktop-id">io.github.mohnstollen.aufgaben.desktop</launchable>
+  <url type="homepage">https://github.com/mohnstollen/aufgaben</url>
+  <url type="bugtracker">https://github.com/mohnstollen/aufgaben/issues</url>
+  <developer id="io.github.mohnstollen"><name>mohnstollen</name></developer>
+  <content_rating type="oars-1.1"/>
+</component>

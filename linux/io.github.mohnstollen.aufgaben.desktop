@@ -1,0 +1,20 @@
+[Desktop Entry]
+Type=Application
+Name=Aufgaben
+GenericName=Aufgabenverwaltung
+GenericName[en]=Task Manager
+Comment=Aufgaben verwalten und mit Nextcloud synchronisieren
+Comment[en]=Manage tasks and sync them with Nextcloud
+Exec=aufgaben
+Icon=io.github.mohnstollen.aufgaben
+Terminal=false
+Categories=Office;ProjectManagement;GTK;
+Keywords=todo;tasks;Aufgaben;Nextcloud;CalDAV;
+StartupNotify=true
+StartupWMClass=io.github.mohnstollen.aufgaben
+Actions=neu;
+
+[Desktop Action neu]
+Name=Neue Aufgabe
+Name[en]=New Task
+Exec=aufgaben --neu

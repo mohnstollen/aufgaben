@@ -1,6 +1,6 @@
 name: Android-APK
 
-# Baut die Android-App (Capacitor) aus der Web-App.
+# Baut die Android-App (Capacitor) und die Linux-Pakete (.deb/.rpm) aus der Web-App.
 # - Bei jedem Push mit relevanten Änderungen: APK als Workflow-Artefakt
 # - Auf main: automatisch ein GitHub-Release v<major>.<minor>.<Laufnummer> (major.minor aus package.json),
 #   das die App über „Nach Updates suchen" findet
@@ -15,6 +15,7 @@ on:
       - "manifest.webmanifest"
       - "icons/**"
       - "android/**"
+      - "linux/**"
       - "scripts/**"
       - "tests/**"
       - "playwright.config.mjs"
@@ -121,5 +122,84 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: Aufgaben ${{ env.VERSION_NAME }}
           files: ${{ runner.temp }}/aufgaben.apk
+          generate_release_notes: true
+          make_latest: true
+
+  # Linux-Anwendung (GTK/WebKitGTK): .deb für Debian/Ubuntu/Mint, .rpm für Fedora
+  linux:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.version.outputs.release_tag }}
+      version_name: ${{ steps.version.outputs.version_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Version bestimmen
+        id: version
+        run: |
+          BASE=$(node -p "require('./package.json').version.split('.').slice(0,2).join('.')")
+          RUN=${{ github.run_number }}
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION_NAME=${GITHUB_REF_NAME#v}; RELEASE_TAG=$GITHUB_REF_NAME
+          elif [[ "$GITHUB_REF" == refs/heads/main ]]; then
+            VERSION_NAME=$BASE.$RUN; RELEASE_TAG=v$VERSION_NAME
+          else
+            VERSION_NAME=$BASE.$RUN-dev.${GITHUB_SHA::7}; RELEASE_TAG=""
+          fi
+          echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+          echo "release_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Werkzeuge installieren
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends rpm xvfb xauth desktop-file-utils
+
+      - name: Pakete bauen
+        run: |
+          desktop-file-validate linux/io.github.mohnstollen.aufgaben.desktop
+          bash linux/build.sh "$VERSION_NAME"
+          cp dist/aufgaben_*_all.deb "$RUNNER_TEMP/aufgaben.deb"
+          cp dist/aufgaben-*.noarch.rpm "$RUNNER_TEMP/aufgaben.rpm"
+
+      # Installiert das Paket samt Abhängigkeiten und prüft Sync (WebDAV + Nextcloud Tasks) am laufenden Programm
+      - name: Paket installieren und testen
+        run: |
+          sudo apt-get install -y "$RUNNER_TEMP/aufgaben.deb"
+          AUFGABEN_CMD=aufgaben node linux/test.mjs
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aufgaben-linux-${{ env.VERSION_NAME }}
+          path: |
+            ${{ runner.temp }}/aufgaben.deb
+            ${{ runner.temp }}/aufgaben.rpm
+          if-no-files-found: error
+
+  # Hängt die Linux-Pakete an das Release (nach dem APK-Job, damit nicht zwei Jobs dasselbe Release anlegen)
+  linux-release:
+    needs: [apk, linux]
+    if: needs.linux.outputs.release_tag != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: aufgaben-linux-*
+          merge-multiple: true
+          path: pakete
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.linux.outputs.release_tag }}
+          target_commitish: ${{ github.sha }}
+          name: Aufgaben ${{ needs.linux.outputs.version_name }}
+          files: |
+            pakete/aufgaben.deb
+            pakete/aufgaben.rpm
           generate_release_notes: true
           make_latest: true

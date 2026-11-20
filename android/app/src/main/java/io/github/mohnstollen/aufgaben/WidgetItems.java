@@ -12,7 +12,7 @@ import org.json.JSONObject;
 /**
  * Wählt aus den von der App gelieferten Aufgaben die fürs Widget aus und beschriftet sie –
  * bezogen auf das aktuelle Datum, damit „heute“ und „überfällig“ auch ohne Öffnen der App stimmen.
- * Eingabe pro Aufgabe: { id, name, quick, due (JJJJ-MM-TT|null), high, created }.
+ * Eingabe pro Aufgabe: { id, name, quick, due (JJJJ-MM-TT|null), high, created, cl („erledigt/gesamt“, optional) }.
  */
 final class WidgetItems {
 
@@ -39,6 +39,8 @@ final class WidgetItems {
                 label = d == 0 ? "Heute" : d == -1 ? "Überfällig · gestern" : "Überfällig · seit " + (-d) + " Tagen";
                 if (o.optBoolean("high")) label += " · 🔴 Hoch";
             }
+            String cl = o.optString("cl", "");                 // Fortschritt einer Checkliste, z. B. „2/5“
+            if (!cl.isEmpty()) label += " · ☑ " + cl;
             try {
                 JSONObject v = new JSONObject();
                 v.put("id", o.optString("id"));
